@@ -1,0 +1,10 @@
+﻿{
+  "name": "hablape-interview-coach",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs src 5173",
+    "dev": "node server.mjs src 5173"
+  }
+}

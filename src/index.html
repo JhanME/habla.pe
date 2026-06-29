@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calentamiento de entrevistas</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar" aria-label="Barra superior">
+        <button class="icon-button" id="backButton" type="button" title="Volver" aria-label="Volver">
+          <span aria-hidden="true">&lt;</span>
+        </button>
+        <h1>Calentamiento de entrevistas</h1>
+        <div class="avatar" aria-label="Usuario">J</div>
+      </header>
+
+      <section class="setup-view" id="setupView" aria-labelledby="setupTitle">
+        <div class="intro-line">
+          <p id="setupTitle">Prepara una entrevista desde una vacante y tu CV.</p>
+          <span>Gemini + vision local</span>
+        </div>
+
+        <form class="setup-grid" id="setupForm">
+          <label class="field">
+            <span>Link de la vacante</span>
+            <input
+              id="jobUrl"
+              name="jobUrl"
+              type="url"
+              placeholder="https://empresa.com/jobs/data-analyst"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="field">
+            <span>CV en archivo</span>
+            <input id="cvFile" name="cvFile" type="file" accept=".txt,.md,.pdf" />
+            <small>TXT/MD se lee automatico. Si es PDF escaneado, pega el texto abajo.</small>
+          </label>
+
+          <label class="field text-field">
+            <span>Texto de la vacante</span>
+            <textarea
+              id="jobText"
+              name="jobText"
+              rows="10"
+              placeholder="Pega aqui descripcion, requisitos, responsabilidades y tecnologias..."
+              required
+            ></textarea>
+          </label>
+
+          <label class="field text-field">
+            <span>Texto del CV</span>
+            <textarea
+              id="cvText"
+              name="cvText"
+              rows="10"
+              placeholder="Pega experiencia, proyectos, skills, educacion y logros..."
+              required
+            ></textarea>
+          </label>
+
+          <div class="setup-actions">
+            <button class="primary-button" id="generateInterview" type="submit">Generar entrevista</button>
+            <button class="ghost-button" id="loadExample" type="button">Cargar ejemplo</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="interview-view hidden" id="interviewView" aria-label="Entrevista">
+        <div class="progress-row">
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <span id="timer">120:00</span>
+        </div>
+
+        <div class="camera-strip">
+          <article class="camera-panel" id="cameraPanel">
+            <video id="cameraVideo" playsinline muted></video>
+            <canvas id="faceOverlay" aria-hidden="true"></canvas>
+            <div class="camera-placeholder" id="cameraPlaceholder">Camara inactiva</div>
+            <div class="face-guide" aria-hidden="true">
+              <div class="portrait-guide"></div>
+              <div class="eye-line-guide"></div>
+            </div>
+            <div class="camera-status" id="cameraStatus">Encuadre pendiente</div>
+          </article>
+          <div class="metrics-panel" aria-label="Metricas visuales">
+            <span id="presenceMetric">Presencia: --</span>
+            <span id="frameMetric">Encuadre: --</span>
+            <span id="gazeMetric">Mirada: --</span>
+          </div>
+        </div>
+
+        <article class="question-card">
+          <div class="question-meta">
+            <span id="questionType">Q1</span>
+            <span id="questionReason">Personalizada para el rol</span>
+          </div>
+          <h2 id="questionText"></h2>
+          <p id="questionHint"></p>
+
+          <label class="answer-area">
+            <span>Tu respuesta</span>
+            <textarea id="answerInput" rows="7" placeholder="Escribe como si estuvieras respondiendo en vivo..."></textarea>
+          </label>
+
+          <div class="feedback-box hidden" id="feedbackBox">
+            <div>
+              <strong id="feedbackScore"></strong>
+              <p id="feedbackSummary"></p>
+            </div>
+            <ul id="feedbackList"></ul>
+          </div>
+
+          <nav class="card-controls" aria-label="Controles de entrevista">
+            <button class="icon-button" id="prevQuestion" type="button" title="Pregunta anterior" aria-label="Pregunta anterior">
+              <span aria-hidden="true">&lt;</span>
+            </button>
+            <div class="center-controls">
+              <button class="icon-button" id="readQuestion" type="button" title="Leer pregunta" aria-label="Leer pregunta">
+                <span aria-hidden="true">)))</span>
+              </button>
+              <button class="icon-button" id="toggleCamera" type="button" title="Activar camara" aria-label="Activar camara">
+                <span aria-hidden="true">cam</span>
+              </button>
+              <button class="primary-button compact" id="evaluateAnswer" type="button">Evaluar</button>
+            </div>
+            <button class="icon-button" id="nextQuestion" type="button" title="Siguiente pregunta" aria-label="Siguiente pregunta">
+              <span aria-hidden="true">&gt;</span>
+            </button>
+          </nav>
+        </article>
+      </section>
+
+      <section class="results-view hidden" id="resultsView" aria-labelledby="resultsTitle">
+        <article class="results-card">
+          <p class="eyebrow">Reporte final</p>
+          <h2 id="resultsTitle">Listo para practicar</h2>
+          <div class="score-circle" id="finalScore">--</div>
+          <p id="finalSummary"></p>
+          <div class="results-columns">
+            <div>
+              <h3>Fortalezas</h3>
+              <ul id="strengthsList"></ul>
+            </div>
+            <div>
+              <h3>Por mejorar</h3>
+              <ul id="improvementsList"></ul>
+            </div>
+          </div>
+          <div class="setup-actions">
+            <button class="primary-button" id="restartInterview" type="button">Nueva entrevista</button>
+            <button class="ghost-button" id="reviewInterview" type="button">Revisar respuestas</button>
+          </div>
+        </article>
+      </section>
+
+      <footer>© Calentamiento de entrevistas 2026</footer>
+    </main>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
