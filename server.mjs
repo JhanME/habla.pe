@@ -119,16 +119,16 @@ Reglas:
   }
 }
 
-async function evaluateInterviewAnswer({ question, answer = "", visualStats = null }) {
+async function evaluateInterviewAnswer({ question, answer = "", speechStats = null, visualStats = null }) {
   if (!question || typeof question !== "object") {
-    return { source: "fallback", feedback: fallbackFeedback({ criteria: [] }, answer, visualStats) };
+    return { source: "fallback", feedback: fallbackFeedback({ criteria: [] }, answer, speechStats, visualStats) };
   }
 
   if (!geminiApiKey) {
     return {
       source: "fallback",
       warning: "GEMINI_API_KEY no esta configurada. Usando evaluacion local.",
-      feedback: fallbackFeedback(question, answer, visualStats),
+      feedback: fallbackFeedback(question, answer, speechStats, visualStats),
     };
   }
 
@@ -146,11 +146,15 @@ ${answer || "(sin respuesta)"}
 Metricas visuales estimadas:
 ${JSON.stringify(visualStats ?? {}, null, 2)}
 
+Metricas orales estimadas:
+${JSON.stringify(speechStats ?? {}, null, 2)}
+
 Devuelve exclusivamente JSON valido con esta forma:
 {
   "score": 1,
   "summary": "resumen breve",
   "tips": ["tip accionable 1", "tip accionable 2", "tip accionable 3"],
+  "oralFeedback": "feedback breve sobre muletillas, pausas o ritmo si hay datos",
   "visualFeedback": "feedback breve sobre encuadre/contacto visual si hay datos"
 }
 
@@ -158,6 +162,8 @@ Reglas:
 - Score entero entre 1 y 10.
 - Penaliza respuestas vacias o demasiado genericas.
 - Valora estructura STAR, evidencia, metricas, claridad y ajuste al rol.
+- Valora comunicacion oral: pocas muletillas, pausas controladas y ritmo natural.
+- Si hay muchas muletillas como eh, mmm, este, o pausas largas, mencionalo con tacto y una accion concreta.
 - Si hay bajo contacto visual o mal encuadre, mencionalo sin exagerar.
 `;
 
@@ -169,7 +175,7 @@ Reglas:
     return {
       source: "fallback",
       warning: "Gemini no respondio correctamente. Usando evaluacion local.",
-      feedback: fallbackFeedback(question, answer, visualStats),
+      feedback: fallbackFeedback(question, answer, speechStats, visualStats),
     };
   }
 }
@@ -225,6 +231,7 @@ function normalizeFeedback(data) {
     score,
     summary: String(data.summary ?? "Feedback generado para tu respuesta."),
     tips: tips.length ? tips : ["Agrega una historia concreta con contexto, accion y resultado."],
+    oralFeedback: data.oralFeedback ? String(data.oralFeedback) : "",
     visualFeedback: data.visualFeedback ? String(data.visualFeedback) : "",
   };
 }
@@ -290,7 +297,7 @@ function fallbackQuestions(jobText, cvText, jobUrl) {
   ];
 }
 
-function fallbackFeedback(question, answer, visualStats) {
+function fallbackFeedback(question, answer, speechStats, visualStats) {
   const normalized = answer.toLowerCase();
   const wordCount = answer.split(/\s+/).filter(Boolean).length;
   const matchedCriteria = (question.criteria ?? []).filter((item) => normalized.includes(String(item).toLowerCase()));
@@ -302,12 +309,18 @@ function fallbackFeedback(question, answer, visualStats) {
   if (matchedCriteria.length >= 2) score += 1;
   if (/\d|%|resultado|impacto|mejor/i.test(answer)) score += 1;
   if (/aprend|decid|implemente|analic|comuniqu/i.test(answer)) score += 1;
+  if ((speechStats?.fillerCount ?? 0) >= 5) score -= 1;
+  if ((speechStats?.longPauses ?? 0) >= 3) score -= 1;
+  if ((speechStats?.wordsPerMinute ?? 0) > 0 && ((speechStats.wordsPerMinute < 85) || (speechStats.wordsPerMinute > 185))) score -= 1;
   if (visualStats?.inFramePercentage < 60) score -= 1;
   if (visualStats?.eyeContactPercentage < 45) score -= 1;
   score = Math.max(1, Math.min(10, score));
 
   const visualFeedback = visualStats
     ? `Encuadre ${Math.round(visualStats.inFramePercentage ?? 0)}%, contacto visual ${Math.round(visualStats.eyeContactPercentage ?? 0)}%.`
+    : "";
+  const oralFeedback = speechStats
+    ? `Muletillas ${speechStats.fillerCount ?? 0}, pausas largas ${speechStats.longPauses ?? 0}, ritmo ${speechStats.wordsPerMinute ?? 0} ppm.`
     : "";
 
   return {
@@ -321,7 +334,10 @@ function fallbackFeedback(question, answer, visualStats) {
       wordCount < 50 ? "Agrega una historia concreta con situacion, accion y resultado." : "Manten la estructura clara y evita extenderte sin evidencia.",
       matchedCriteria.length < 2 ? `Incluye explicitamente: ${(question.criteria ?? []).slice(0, 3).join(", ")}.` : "Buen uso de criterios relevantes para la pregunta.",
       /\d|%/.test(answer) ? "Buen detalle: los numeros ayudan a sonar mas convincente." : "Anade una metrica, plazo o resultado observable.",
+      (speechStats?.fillerCount ?? 0) >= 5 ? "Reduce muletillas: respira, pausa un segundo y retoma con la siguiente idea." : "Buen control de muletillas para una respuesta hablada.",
+      (speechStats?.longPauses ?? 0) >= 3 ? "Practica una estructura de 3 puntos para evitar pausas largas." : "Las pausas no interrumpen demasiado la respuesta.",
     ],
+    oralFeedback,
     visualFeedback,
   };
 }

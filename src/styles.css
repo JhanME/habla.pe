@@ -458,6 +458,12 @@ textarea:focus {
   gap: 12px;
 }
 
+.voice-actions span {
+  color: var(--muted);
+  font-family: var(--font-app-mono);
+  font-size: .78rem;
+}
+
 .voice-header strong {
   color: var(--muted);
   font-family: var(--font-app-mono);
@@ -523,10 +529,6 @@ textarea:focus {
 .voice-panel.recording {
   border-color: color-mix(in oklab, #dc2626 52%, transparent);
   box-shadow: 0 0 0 3px color-mix(in oklab, #dc2626 13%, transparent);
-}
-
-.voice-actions {
-  justify-content: flex-end;
 }
 
 .feedback-box {

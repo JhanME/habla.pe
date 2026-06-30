@@ -64,6 +64,12 @@ Incluye:
 
 Las respuestas no se escriben: se graban con el microfono y se transcriben en el navegador con Web Speech API. Funciona mejor en Chrome o Edge y requiere permiso de microfono.
 
+La grabacion se reinicia automaticamente si el navegador corta una sesion de reconocimiento por silencio o red. Durante cada respuesta se miden:
+
+- Muletillas como `eh`, `mmm`, `este`, `o sea`, `tipo`.
+- Pausas largas de mas de 2.8 segundos.
+- Ritmo aproximado en palabras por minuto.
+
 ## Siguiente fase
 
 Persistir sesiones y reportes para comparar progreso entre entrevistas.

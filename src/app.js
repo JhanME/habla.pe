@@ -6,9 +6,19 @@ const state = {
   timerId: null,
   cameraStream: null,
   speechRecognition: null,
+  wantsAnswerRecording: false,
   isRecordingAnswer: false,
+  speechRestartId: null,
+  speechWatchId: null,
   activeTranscript: "",
   finalTranscript: "",
+  speechStats: {
+    startedAt: null,
+    lastSpeechAt: null,
+    pauseArmed: true,
+    longPauses: 0,
+    longestPauseMs: 0,
+  },
   visualDetector: null,
   visualLoopId: null,
   visualSamples: {
@@ -61,6 +71,7 @@ const els = {
   voicePanel: $("#voicePanel"),
   voiceStatus: $("#voiceStatus"),
   voiceTranscript: $("#voiceTranscript"),
+  speechMetrics: $("#speechMetrics"),
   feedbackBox: $("#feedbackBox"),
   feedbackScore: $("#feedbackScore"),
   feedbackSummary: $("#feedbackSummary"),
@@ -182,9 +193,10 @@ els.evaluateAnswer.addEventListener("click", async () => {
     const result = await postJson("/api/interview/feedback", {
       question,
       answer,
+      speechStats: getSpeechStatsSnapshot(),
       visualStats: getVisualStatsSnapshot(),
     });
-    state.answers.set(question.id, { answer, feedback: result.feedback });
+    state.answers.set(question.id, { answer, speechStats: getSpeechStatsSnapshot(), feedback: result.feedback });
     renderFeedback(result.feedback);
   } catch (error) {
     console.error(error);
@@ -220,8 +232,7 @@ els.recordAnswer.addEventListener("click", () => {
 
 els.clearAnswer.addEventListener("click", () => {
   stopAnswerRecording();
-  state.finalTranscript = "";
-  state.activeTranscript = "";
+  resetSpeechStats(true);
   saveCurrentAnswer("");
   renderVoiceTranscript("");
   els.feedbackBox.classList.add("hidden");
@@ -270,6 +281,7 @@ function renderQuestion() {
   els.questionHint.textContent = question.hint;
   state.finalTranscript = saved?.answer ?? "";
   state.activeTranscript = "";
+  resetSpeechStats(false);
   renderVoiceTranscript(state.finalTranscript);
 
   if (saved?.feedback) {
@@ -283,9 +295,14 @@ function saveCurrentAnswer(answerOverride = null) {
   const question = state.questions[state.current];
   const previous = state.answers.get(question.id);
   const answer = answerOverride ?? getCurrentTranscript();
+  const answerChanged = answer !== (previous?.answer ?? "");
+  const speechStats = !answerChanged && previous?.speechStats
+    ? previous.speechStats
+    : getSpeechStatsSnapshot();
   state.answers.set(question.id, {
     answer,
-    feedback: previous?.feedback,
+    speechStats,
+    feedback: answerChanged ? undefined : previous?.feedback,
   });
 }
 
@@ -314,10 +331,12 @@ function setupSpeechRecognition() {
     els.recordAnswer.setAttribute("aria-pressed", "true");
     els.voicePanel.classList.add("recording");
     els.voiceStatus.textContent = "Grabando";
+    startSpeechWatch();
   });
 
   recognition.addEventListener("result", (event) => {
     let interim = "";
+    registerSpeechActivity();
 
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const transcript = event.results[index][0]?.transcript?.trim() ?? "";
@@ -338,17 +357,34 @@ function setupSpeechRecognition() {
   recognition.addEventListener("end", () => {
     state.isRecordingAnswer = false;
     state.activeTranscript = "";
+    stopSpeechWatch();
+    renderVoiceTranscript(getCurrentTranscript());
+    saveCurrentAnswer();
+
+    if (state.wantsAnswerRecording) {
+      els.voiceStatus.textContent = "Reconectando microfono...";
+      scheduleSpeechRestart();
+      return;
+    }
+
     els.recordAnswer.setAttribute("aria-pressed", "false");
     els.voicePanel.classList.remove("recording");
     els.voiceStatus.textContent = getCurrentTranscript() ? "Respuesta capturada" : "Listo para grabar";
-    renderVoiceTranscript(getCurrentTranscript());
   });
 
   recognition.addEventListener("error", (event) => {
     state.isRecordingAnswer = false;
+    stopSpeechWatch();
+    els.voiceStatus.textContent = getSpeechErrorMessage(event.error);
+
+    if (state.wantsAnswerRecording && canRecoverSpeechError(event.error)) {
+      scheduleSpeechRestart(650);
+      return;
+    }
+
+    state.wantsAnswerRecording = false;
     els.recordAnswer.setAttribute("aria-pressed", "false");
     els.voicePanel.classList.remove("recording");
-    els.voiceStatus.textContent = getSpeechErrorMessage(event.error);
   });
 
   state.speechRecognition = recognition;
@@ -358,7 +394,10 @@ function startAnswerRecording() {
   if (!state.speechRecognition || state.isRecordingAnswer) return;
 
   speechSynthesis.cancel();
+  state.wantsAnswerRecording = true;
   state.activeTranscript = "";
+  clearSpeechRestart();
+  resetSpeechStats(false);
 
   try {
     state.speechRecognition.start();
@@ -368,12 +407,20 @@ function startAnswerRecording() {
 }
 
 function stopAnswerRecording() {
-  if (!state.speechRecognition || !state.isRecordingAnswer) return;
+  state.wantsAnswerRecording = false;
+  clearSpeechRestart();
+  stopSpeechWatch();
   if (state.activeTranscript) {
     appendFinalTranscript(state.activeTranscript);
     state.activeTranscript = "";
     renderVoiceTranscript(getCurrentTranscript());
     saveCurrentAnswer();
+  }
+  if (!state.speechRecognition || !state.isRecordingAnswer) {
+    els.recordAnswer.setAttribute("aria-pressed", "false");
+    els.voicePanel.classList.remove("recording");
+    els.voiceStatus.textContent = getCurrentTranscript() ? "Respuesta capturada" : "Listo para grabar";
+    return;
   }
   state.speechRecognition.stop();
 }
@@ -391,6 +438,96 @@ function appendFinalTranscript(transcript) {
 function renderVoiceTranscript(transcript) {
   els.voiceTranscript.textContent = transcript || "Pulsa grabar y responde en voz alta.";
   els.evaluateAnswer.disabled = !transcript.trim();
+  renderSpeechMetrics();
+}
+
+function scheduleSpeechRestart(delay = 350) {
+  clearSpeechRestart();
+  state.speechRestartId = window.setTimeout(() => {
+    state.speechRestartId = null;
+    if (!state.wantsAnswerRecording || state.isRecordingAnswer) return;
+    try {
+      state.speechRecognition.start();
+    } catch (error) {
+      console.warn(error);
+      scheduleSpeechRestart(900);
+    }
+  }, delay);
+}
+
+function clearSpeechRestart() {
+  if (state.speechRestartId) window.clearTimeout(state.speechRestartId);
+  state.speechRestartId = null;
+}
+
+function startSpeechWatch() {
+  if (!state.speechStats.startedAt) resetSpeechStats(false);
+  state.speechStats.lastSpeechAt = state.speechStats.lastSpeechAt ?? Date.now();
+  stopSpeechWatch();
+  state.speechWatchId = window.setInterval(() => {
+    if (!state.wantsAnswerRecording) return;
+    const now = Date.now();
+    const silenceMs = now - (state.speechStats.lastSpeechAt ?? now);
+
+    if (silenceMs >= 2800 && state.speechStats.pauseArmed) {
+      state.speechStats.longPauses += 1;
+      state.speechStats.pauseArmed = false;
+    }
+
+    state.speechStats.longestPauseMs = Math.max(state.speechStats.longestPauseMs, silenceMs);
+    renderSpeechMetrics();
+  }, 500);
+}
+
+function stopSpeechWatch() {
+  if (state.speechWatchId) window.clearInterval(state.speechWatchId);
+  state.speechWatchId = null;
+}
+
+function registerSpeechActivity() {
+  const now = Date.now();
+  state.speechStats.startedAt = state.speechStats.startedAt ?? now;
+  state.speechStats.lastSpeechAt = now;
+  state.speechStats.pauseArmed = true;
+}
+
+function resetSpeechStats(clearTranscript = true) {
+  state.speechStats = {
+    startedAt: Date.now(),
+    lastSpeechAt: Date.now(),
+    pauseArmed: true,
+    longPauses: 0,
+    longestPauseMs: 0,
+  };
+  if (clearTranscript) {
+    state.finalTranscript = "";
+    state.activeTranscript = "";
+  }
+  renderSpeechMetrics();
+}
+
+function getSpeechStatsSnapshot() {
+  const transcript = getCurrentTranscript();
+  const words = transcript.split(/\s+/).filter(Boolean);
+  const fillerMatches = transcript.match(/\b(e+h+|eh+|em+|mmm+|um+|este+|o sea|osea|tipo|bueno)\b/gi) ?? [];
+  const durationSeconds = state.speechStats.startedAt
+    ? Math.max(1, Math.round((Date.now() - state.speechStats.startedAt) / 1000))
+    : 0;
+
+  return {
+    fillerCount: fillerMatches.length,
+    fillers: [...new Set(fillerMatches.map((item) => item.toLowerCase()))].slice(0, 8),
+    longPauses: state.speechStats.longPauses,
+    longestPauseSeconds: Math.round((state.speechStats.longestPauseMs / 1000) * 10) / 10,
+    durationSeconds,
+    wordsPerMinute: durationSeconds ? Math.round((words.length / durationSeconds) * 60) : 0,
+    wordCount: words.length,
+  };
+}
+
+function renderSpeechMetrics() {
+  const stats = getSpeechStatsSnapshot();
+  els.speechMetrics.textContent = `Muletillas: ${stats.fillerCount} · Pausas largas: ${stats.longPauses} · Ritmo: ${stats.wordsPerMinute} ppm`;
 }
 
 function getSpeechErrorMessage(error) {
@@ -403,11 +540,17 @@ function getSpeechErrorMessage(error) {
   return messages[error] ?? "No se pudo transcribir";
 }
 
+function canRecoverSpeechError(error) {
+  return ["no-speech", "network", "aborted"].includes(error);
+}
+
 function renderFeedback(feedback) {
   els.feedbackScore.textContent = `Score ${feedback.score}/10`;
-  els.feedbackSummary.textContent = feedback.visualFeedback
-    ? `${feedback.summary} ${feedback.visualFeedback}`
-    : feedback.summary;
+  els.feedbackSummary.textContent = [
+    feedback.summary,
+    feedback.oralFeedback,
+    feedback.visualFeedback,
+  ].filter(Boolean).join(" ");
   els.feedbackList.innerHTML = "";
   feedback.tips.forEach((tip) => {
     const li = document.createElement("li");
@@ -432,9 +575,14 @@ async function renderResults() {
     const result = await postJson("/api/interview/feedback", {
       question,
       answer: saved?.answer ?? "",
+      speechStats: saved?.speechStats ?? getSpeechStatsSnapshot(),
       visualStats: getVisualStatsSnapshot(),
     });
-    state.answers.set(question.id, { answer: saved?.answer ?? "", feedback: result.feedback });
+    state.answers.set(question.id, {
+      answer: saved?.answer ?? "",
+      speechStats: saved?.speechStats ?? getSpeechStatsSnapshot(),
+      feedback: result.feedback,
+    });
     evaluated.push(result.feedback);
   }
 
