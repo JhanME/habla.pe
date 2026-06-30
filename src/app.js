@@ -87,6 +87,10 @@ const els = {
   improvementsList: $("#improvementsList"),
   restartInterview: $("#restartInterview"),
   reviewInterview: $("#reviewInterview"),
+  feedbackSidebar: $("#feedbackSidebar"),
+  toggleFeedbackBtn: $("#toggleFeedbackBtn"),
+  restoreFeedbackBtn: $("#restoreFeedbackBtn"),
+  feedbackPlaceholder: $("#feedbackPlaceholder"),
 };
 
 const examples = {
@@ -146,6 +150,9 @@ els.setupForm.addEventListener("submit", async (event) => {
     showView("interview");
     renderQuestion();
     startTimer();
+    if (!state.cameraStream) {
+      await startCamera();
+    }
 
     if (result.warning) {
       console.warn(result.warning);
@@ -202,7 +209,7 @@ els.evaluateAnswer.addEventListener("click", async () => {
     console.error(error);
     alert("No se pudo evaluar la respuesta. Intenta nuevamente.");
   } finally {
-    setButtonBusy(els.evaluateAnswer, false, "Evaluar");
+    setButtonBusy(els.evaluateAnswer, false, "Evaluar con IA");
   }
 });
 
@@ -236,6 +243,7 @@ els.clearAnswer.addEventListener("click", () => {
   saveCurrentAnswer("");
   renderVoiceTranscript("");
   els.feedbackBox.classList.add("hidden");
+  if (els.feedbackPlaceholder) els.feedbackPlaceholder.classList.remove("hidden");
 });
 
 els.backButton.addEventListener("click", () => {
@@ -263,7 +271,20 @@ els.reviewInterview.addEventListener("click", () => {
   renderQuestion();
 });
 
+if (els.toggleFeedbackBtn && els.feedbackSidebar && els.restoreFeedbackBtn) {
+  els.toggleFeedbackBtn.addEventListener("click", () => {
+    els.feedbackSidebar.classList.add("minimized");
+    els.restoreFeedbackBtn.classList.remove("hidden");
+  });
+
+  els.restoreFeedbackBtn.addEventListener("click", () => {
+    els.feedbackSidebar.classList.remove("minimized");
+    els.restoreFeedbackBtn.classList.add("hidden");
+  });
+}
+
 function showView(view) {
+  document.body.classList.toggle("interview-active", view === "interview");
   els.setupView.classList.toggle("hidden", view !== "setup");
   els.interviewView.classList.toggle("hidden", view !== "interview");
   els.resultsView.classList.toggle("hidden", view !== "results");
@@ -288,6 +309,7 @@ function renderQuestion() {
     renderFeedback(saved.feedback);
   } else {
     els.feedbackBox.classList.add("hidden");
+    if (els.feedbackPlaceholder) els.feedbackPlaceholder.classList.remove("hidden");
   }
 }
 
@@ -558,6 +580,13 @@ function renderFeedback(feedback) {
     els.feedbackList.appendChild(li);
   });
   els.feedbackBox.classList.remove("hidden");
+  if (els.feedbackPlaceholder) els.feedbackPlaceholder.classList.add("hidden");
+  if (els.feedbackSidebar) {
+    els.feedbackSidebar.classList.remove("minimized");
+  }
+  if (els.restoreFeedbackBtn) {
+    els.restoreFeedbackBtn.classList.add("hidden");
+  }
 }
 
 async function renderResults() {

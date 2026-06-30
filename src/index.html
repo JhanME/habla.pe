@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Calentamiento de entrevistas</title>
+    <title>Habla.pe - Calentamiento de Entrevistas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -77,7 +80,7 @@
           <span id="timer">120:00</span>
         </div>
 
-        <div class="camera-strip">
+        <div class="interview-workspace">
           <article class="camera-panel" id="cameraPanel">
             <video id="cameraVideo" playsinline muted></video>
             <canvas id="faceOverlay" aria-hidden="true"></canvas>
@@ -86,66 +89,92 @@
               <div class="portrait-guide"></div>
               <div class="eye-line-guide"></div>
             </div>
+            <div class="live-badge" aria-hidden="true"><span></span> LIVE</div>
             <div class="camera-status" id="cameraStatus">Encuadre pendiente</div>
+            <div class="metrics-panel" aria-label="Metricas visuales">
+              <span id="presenceMetric">Presencia: --</span>
+              <span id="frameMetric">Encuadre: --</span>
+              <span id="gazeMetric">Mirada: --</span>
+            </div>
           </article>
-          <div class="metrics-panel" aria-label="Metricas visuales">
-            <span id="presenceMetric">Presencia: --</span>
-            <span id="frameMetric">Encuadre: --</span>
-            <span id="gazeMetric">Mirada: --</span>
-          </div>
-        </div>
 
-        <article class="question-card">
-          <div class="question-meta">
-            <span id="questionType">Q1</span>
-            <span id="questionReason">Personalizada para el rol</span>
-          </div>
-          <h2 id="questionText"></h2>
-          <p id="questionHint"></p>
-
-          <section class="voice-answer" aria-labelledby="voiceAnswerTitle">
-            <div class="voice-header">
-              <span id="voiceAnswerTitle">Respuesta hablada</span>
-              <strong id="voiceStatus">Listo para grabar</strong>
+          <article class="question-overlay-box">
+            <div class="question-box-header">
+              <div class="question-meta">
+                <span id="questionType">Q1</span>
+                <span id="questionReason">Personalizada para el rol</span>
+              </div>
+              <div class="question-actions">
+                <button class="icon-button compact-control" id="readQuestion" type="button" title="Leer pregunta" aria-label="Leer pregunta">
+                  <span aria-hidden="true">Audio</span>
+                </button>
+                <button class="icon-button compact-control" id="toggleCamera" type="button" title="Activar camara" aria-label="Activar camara">
+                  <span aria-hidden="true">Cam</span>
+                </button>
+              </div>
             </div>
-            <div class="voice-panel" id="voicePanel">
-              <button class="record-button" id="recordAnswer" type="button" aria-pressed="false">
-                <span aria-hidden="true"></span>
+            <h2 id="questionText">Cargando pregunta...</h2>
+            <p id="questionHint"></p>
+          </article>
+
+          <article class="recording-overlay-box">
+            <section class="voice-answer" aria-labelledby="voiceAnswerTitle">
+              <div class="voice-header">
+                <span id="voiceAnswerTitle">Respuesta hablada</span>
+                <strong id="voiceStatus">Listo para grabar</strong>
+              </div>
+              <div class="voice-panel" id="voicePanel">
+                <button class="record-button" id="recordAnswer" type="button" aria-pressed="false">
+                  <span aria-hidden="true"></span>
+                </button>
+                <p id="voiceTranscript">Pulsa grabar y responde en voz alta.</p>
+              </div>
+              <div class="voice-actions">
+                <span id="speechMetrics">Muletillas: 0 · Pausas largas: 0</span>
+                <button class="ghost-button compact" id="clearAnswer" type="button">Limpiar</button>
+              </div>
+            </section>
+
+            <nav class="card-controls" aria-label="Controles de entrevista">
+              <button class="icon-button" id="prevQuestion" type="button" title="Pregunta anterior" aria-label="Pregunta anterior">
+                <span aria-hidden="true">&lt;</span>
               </button>
-              <p id="voiceTranscript">Pulsa grabar y responde en voz alta.</p>
-            </div>
-            <div class="voice-actions">
-              <span id="speechMetrics">Muletillas: 0 · Pausas largas: 0</span>
-              <button class="ghost-button compact" id="clearAnswer" type="button">Limpiar</button>
-            </div>
-          </section>
+              <div class="center-controls">
+                <button class="primary-button compact" id="evaluateAnswer" type="button">Evaluar con IA</button>
+              </div>
+              <button class="icon-button" id="nextQuestion" type="button" title="Siguiente pregunta" aria-label="Siguiente pregunta">
+                <span aria-hidden="true">&gt;</span>
+              </button>
+            </nav>
+          </article>
 
-          <div class="feedback-box hidden" id="feedbackBox">
-            <div>
-              <strong id="feedbackScore"></strong>
+          <article class="feedback-overlay-box" id="feedbackSidebar">
+            <div class="sidebar-header">
+              <h3>Feedback de IA</h3>
+              <button class="icon-button close-sidebar" id="toggleFeedbackBtn" type="button" title="Minimizar feedback" aria-label="Minimizar feedback">
+                <span aria-hidden="true">x</span>
+              </button>
+            </div>
+
+            <div class="feedback-placeholder-box" id="feedbackPlaceholder">
+              <div class="placeholder-icon">IA</div>
+              <h4>Tu coach virtual</h4>
+              <p>Responde en voz alta y usa <strong>Evaluar con IA</strong> para recibir recomendaciones.</p>
+            </div>
+
+            <div class="feedback-box hidden" id="feedbackBox">
+              <div class="feedback-score-badge">
+                <span id="feedbackScore">Score --/10</span>
+              </div>
               <p id="feedbackSummary"></p>
+              <ul id="feedbackList"></ul>
             </div>
-            <ul id="feedbackList"></ul>
-          </div>
+          </article>
 
-          <nav class="card-controls" aria-label="Controles de entrevista">
-            <button class="icon-button" id="prevQuestion" type="button" title="Pregunta anterior" aria-label="Pregunta anterior">
-              <span aria-hidden="true">&lt;</span>
-            </button>
-            <div class="center-controls">
-              <button class="icon-button" id="readQuestion" type="button" title="Leer pregunta" aria-label="Leer pregunta">
-                <span aria-hidden="true">)))</span>
-              </button>
-              <button class="icon-button" id="toggleCamera" type="button" title="Activar camara" aria-label="Activar camara">
-                <span aria-hidden="true">cam</span>
-              </button>
-              <button class="primary-button compact" id="evaluateAnswer" type="button">Evaluar</button>
-            </div>
-            <button class="icon-button" id="nextQuestion" type="button" title="Siguiente pregunta" aria-label="Siguiente pregunta">
-              <span aria-hidden="true">&gt;</span>
-            </button>
-          </nav>
-        </article>
+          <button class="floating-feedback-toggle hidden" id="restoreFeedbackBtn" type="button" title="Mostrar feedback de IA" aria-label="Mostrar feedback de IA">
+            <span>Ver feedback</span>
+          </button>
+        </div>
       </section>
 
       <section class="results-view hidden" id="resultsView" aria-labelledby="resultsTitle">
