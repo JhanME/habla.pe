@@ -310,6 +310,8 @@ function renderQuestion() {
   } else {
     els.feedbackBox.classList.add("hidden");
     if (els.feedbackPlaceholder) els.feedbackPlaceholder.classList.remove("hidden");
+    if (els.feedbackSidebar) els.feedbackSidebar.classList.add("minimized");
+    if (els.restoreFeedbackBtn) els.restoreFeedbackBtn.classList.remove("hidden");
   }
 }
 

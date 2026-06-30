@@ -1,15 +1,15 @@
 :root {
   color-scheme: light dark;
-  --bg: #f4f7f6;
+  --bg: #f8f9fa;
   --fg: #111827;
-  --muted: #647075;
+  --muted: #65717a;
   --panel: #ffffff;
-  --panel-soft: #eef4f2;
-  --glass: rgba(255, 255, 255, .78);
-  --glass-strong: rgba(255, 255, 255, .9);
+  --panel-soft: #f2f4f6;
+  --glass: rgba(255, 255, 255, .88);
+  --glass-strong: rgba(255, 255, 255, .95);
   --line: rgba(17, 24, 39, .12);
-  --brand: #8de6d2;
-  --brand-strong: #36c8aa;
+  --brand: #111827;
+  --brand-strong: #111827;
   --danger: #ef4444;
   --amber: #f59e0b;
   --ok: #22c55e;
@@ -20,8 +20,8 @@
   --font-display: "Outfit", system-ui, -apple-system, Segoe UI, sans-serif;
   --font-body: "Plus Jakarta Sans", system-ui, -apple-system, Segoe UI, sans-serif;
   --font-mono: "Cascadia Code", "Ubuntu Mono", ui-monospace, monospace;
-  --shadow: 0 20px 50px rgba(15, 23, 42, .18);
-  --shadow-soft: 0 10px 28px rgba(15, 23, 42, .12);
+  --shadow: 0 14px 34px rgba(15, 23, 42, .16);
+  --shadow-soft: 0 6px 18px rgba(15, 23, 42, .10);
 }
 
 * {
@@ -194,7 +194,7 @@ textarea {
 input:focus,
 textarea:focus {
   border-color: var(--brand-strong);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-strong) 20%, transparent);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, .12);
 }
 
 .setup-actions {
@@ -249,7 +249,7 @@ textarea:focus {
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: var(--brand-strong);
+  background: #111827;
   transition: width 220ms ease;
 }
 
@@ -259,10 +259,7 @@ textarea:focus {
 }
 
 .interview-active {
-  background:
-    radial-gradient(circle at 8% 18%, rgba(141, 230, 210, .28), transparent 26%),
-    radial-gradient(circle at 96% 82%, rgba(54, 200, 170, .22), transparent 28%),
-    #edf3f1;
+  background: #eef1f2;
 }
 
 .interview-active .app-shell {
@@ -277,18 +274,18 @@ textarea:focus {
 .interview-active .interview-view {
   min-height: 100dvh;
   justify-content: center;
-  padding: 12px 0;
+  padding: 10px 0;
 }
 
 .interview-workspace {
   position: relative;
   width: min(1280px, 100%);
-  height: min(820px, calc(100dvh - 56px));
-  min-height: 620px;
+  height: min(840px, calc(100dvh - 52px));
+  min-height: 640px;
   margin: 0 auto;
   overflow: hidden;
-  border: 10px solid #101820;
-  border-radius: 26px;
+  border: 8px solid #111827;
+  border-radius: 22px;
   background: #111827;
   box-shadow: var(--shadow);
 }
@@ -328,9 +325,7 @@ textarea:focus {
   place-items: center;
   color: #f8fafc;
   font-family: var(--font-mono);
-  background:
-    linear-gradient(135deg, rgba(141, 230, 210, .18), transparent 40%),
-    linear-gradient(145deg, #1f2937, #0b1020);
+  background: #111827;
 }
 
 .camera-panel.active .camera-placeholder {
@@ -343,9 +338,7 @@ textarea:focus {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, .34), transparent 22%, transparent 70%, rgba(0, 0, 0, .42)),
-    linear-gradient(90deg, rgba(0, 0, 0, .18), transparent 24%, transparent 70%, rgba(0, 0, 0, .34));
+  background: rgba(0, 0, 0, .08);
 }
 
 .live-badge {
@@ -358,8 +351,8 @@ textarea:focus {
   gap: 7px;
   padding: 7px 11px;
   border-radius: var(--radius-full);
-  background: rgba(236, 253, 245, .92);
-  color: #065f46;
+  background: rgba(255, 255, 255, .92);
+  color: #111827;
   font-family: var(--font-mono);
   font-size: .78rem;
   font-weight: 800;
@@ -370,7 +363,7 @@ textarea:focus {
   width: 8px;
   aspect-ratio: 1;
   border-radius: var(--radius-full);
-  background: #10b981;
+  background: #16a34a;
 }
 
 .face-guide {
@@ -384,8 +377,8 @@ textarea:focus {
 
 .portrait-guide {
   position: absolute;
-  top: 18%;
-  width: min(34%, 300px);
+  top: 17%;
+  width: min(30%, 260px);
   aspect-ratio: .72;
   border: 2px solid rgba(255, 255, 255, .64);
   border-radius: 48% 48% 42% 42%;
@@ -394,8 +387,8 @@ textarea:focus {
 
 .eye-line-guide {
   position: absolute;
-  top: 43%;
-  width: min(26%, 190px);
+  top: 42%;
+  width: min(22%, 160px);
   height: 1px;
   color: rgba(255, 255, 255, .58);
   background: currentColor;
@@ -450,14 +443,14 @@ textarea:focus {
   color: #fff;
   background: rgba(9, 12, 18, .64);
   border: 1px solid rgba(255, 255, 255, .12);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .camera-status {
   position: absolute;
-  left: 22px;
-  bottom: 22px;
+  left: 18px;
+  bottom: 18px;
   z-index: 6;
   padding: 8px 12px;
   border-radius: var(--radius-full);
@@ -477,8 +470,8 @@ textarea:focus {
 
 .metrics-panel {
   position: absolute;
-  right: 22px;
-  bottom: 22px;
+  right: 18px;
+  bottom: 18px;
   z-index: 6;
   display: flex;
   flex-wrap: wrap;
@@ -497,19 +490,21 @@ textarea:focus {
   position: absolute;
   z-index: 12;
   border: 1px solid rgba(255, 255, 255, .42);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--glass);
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .question-overlay-box {
-  top: 26px;
+  top: 18px;
   left: 50%;
-  width: min(760px, calc(100% - 440px));
-  min-width: 420px;
-  padding: 18px 22px;
+  width: min(780px, calc(100% - 84px));
+  min-width: 360px;
+  max-height: 164px;
+  padding: 14px 18px;
+  overflow: hidden;
   transform: translateX(-50%);
 }
 
@@ -528,16 +523,16 @@ textarea:focus {
 }
 
 .question-overlay-box h2 {
-  margin: 0 0 8px;
-  font-size: clamp(1.18rem, 2.1vw, 1.85rem);
-  line-height: 1.2;
+  margin: 0 0 6px;
+  font-size: clamp(1rem, 1.35vw, 1.32rem);
+  line-height: 1.25;
   font-weight: 700;
 }
 
 .question-overlay-box p {
   margin: 0;
   color: var(--muted);
-  font-size: .92rem;
+  font-size: .82rem;
   line-height: 1.4;
 }
 
@@ -560,10 +555,10 @@ textarea:focus {
 
 .recording-overlay-box {
   left: 50%;
-  bottom: 24px;
-  width: min(760px, calc(100% - 440px));
-  min-width: 420px;
-  padding: 16px;
+  bottom: 18px;
+  width: min(780px, calc(100% - 84px));
+  min-width: 360px;
+  padding: 12px 14px;
   transform: translateX(-50%);
 }
 
@@ -582,12 +577,12 @@ textarea:focus {
 }
 
 .voice-panel {
-  min-height: 104px;
+  min-height: 76px;
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 52px 1fr;
   align-items: center;
   gap: 14px;
-  padding: 13px 14px;
+  padding: 10px 12px;
   border: 1px solid rgba(17, 24, 39, .12);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, .48);
@@ -599,22 +594,22 @@ textarea:focus {
 }
 
 .record-button {
-  width: 58px;
+  width: 48px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   border: 0;
   border-radius: var(--radius-full);
-  background: var(--brand);
-  color: #063f35;
-  box-shadow: 0 10px 22px rgba(54, 200, 170, .34);
+  background: #111827;
+  color: #fff;
+  box-shadow: var(--shadow-soft);
 }
 
 .record-button span {
-  width: 17px;
+  width: 14px;
   aspect-ratio: 1;
   border-radius: var(--radius-full);
-  background: #0f766e;
+  background: #fff;
 }
 
 .record-button[aria-pressed="true"] {
@@ -628,8 +623,8 @@ textarea:focus {
 }
 
 .voice-panel p {
-  max-height: 82px;
-  min-height: 52px;
+  max-height: 58px;
+  min-height: 38px;
   margin: 0;
   overflow-y: auto;
   color: var(--fg);
@@ -652,21 +647,21 @@ textarea:focus {
 }
 
 .feedback-overlay-box {
-  top: 24px;
-  right: 24px;
-  bottom: 24px;
-  width: min(360px, calc(100% - 48px));
+  top: 18px;
+  right: 18px;
+  bottom: 18px;
+  width: min(340px, calc(100% - 36px));
   z-index: 18;
   display: flex;
   flex-direction: column;
-  padding: 18px;
+  padding: 16px;
   overflow-y: auto;
   background: var(--glass-strong);
   transition: transform 260ms ease, opacity 200ms ease;
 }
 
 .feedback-overlay-box.minimized {
-  transform: translateX(calc(100% + 34px));
+  transform: translateX(calc(100% + 28px));
   opacity: 0;
   pointer-events: none;
 }
@@ -709,8 +704,8 @@ textarea:focus {
   display: grid;
   place-items: center;
   border-radius: var(--radius-full);
-  background: var(--brand);
-  color: #063f35;
+  background: #111827;
+  color: #fff;
   font-family: var(--font-mono);
   font-weight: 900;
 }
@@ -766,8 +761,8 @@ textarea:focus {
 
 .floating-feedback-toggle {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  top: 18px;
+  right: 18px;
   z-index: 16;
   min-height: 42px;
   padding: 0 16px;
@@ -846,8 +841,8 @@ footer {
 @media (max-width: 1060px) {
   .question-overlay-box,
   .recording-overlay-box {
-    left: 24px;
-    width: calc(100% - 408px);
+    left: 18px;
+    width: calc(100% - 386px);
     min-width: 0;
     transform: none;
   }
@@ -906,7 +901,7 @@ footer {
     height: min(54dvh, 420px);
     min-height: 300px;
     overflow: hidden;
-    border: 8px solid #101820;
+    border: 8px solid #111827;
     border-radius: 22px;
   }
 
@@ -957,10 +952,7 @@ footer {
   }
 
   .interview-active {
-    background:
-      radial-gradient(circle at 8% 18%, rgba(141, 230, 210, .14), transparent 26%),
-      radial-gradient(circle at 96% 82%, rgba(54, 200, 170, .12), transparent 28%),
-      #0b1013;
+    background: #0b1013;
   }
 
   .compact-control,
