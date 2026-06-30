@@ -53,11 +53,16 @@ Incluye:
 - Input de CV por texto o archivo TXT/MD.
 - Generacion de preguntas con Gemini via backend.
 - Flujo de entrevista pregunta por pregunta.
-- Feedback por respuesta con Gemini via backend.
+- Respuestas habladas con transcripcion del navegador.
+- Feedback por respuesta hablada con Gemini via backend.
 - Reporte final.
 - Camara con overlay de encuadre en verde/rojo.
 - Tracking de mirada con MediaPipe Face Landmarker cuando esta disponible.
 - Fallback local sin Gemini y fallback visual con FaceDetector si MediaPipe no carga.
+
+## Voz
+
+Las respuestas no se escriben: se graban con el microfono y se transcriben en el navegador con Web Speech API. Funciona mejor en Chrome o Edge y requiere permiso de microfono.
 
 ## Siguiente fase
 

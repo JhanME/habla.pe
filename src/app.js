@@ -5,6 +5,10 @@ const state = {
   secondsLeft: 120 * 60,
   timerId: null,
   cameraStream: null,
+  speechRecognition: null,
+  isRecordingAnswer: false,
+  activeTranscript: "",
+  finalTranscript: "",
   visualDetector: null,
   visualLoopId: null,
   visualSamples: {
@@ -52,7 +56,11 @@ const els = {
   questionReason: $("#questionReason"),
   questionText: $("#questionText"),
   questionHint: $("#questionHint"),
-  answerInput: $("#answerInput"),
+  recordAnswer: $("#recordAnswer"),
+  clearAnswer: $("#clearAnswer"),
+  voicePanel: $("#voicePanel"),
+  voiceStatus: $("#voiceStatus"),
+  voiceTranscript: $("#voiceTranscript"),
   feedbackBox: $("#feedbackBox"),
   feedbackScore: $("#feedbackScore"),
   feedbackSummary: $("#feedbackSummary"),
@@ -77,6 +85,9 @@ Requisitos: SQL, Python, Pandas, visualizacion, pensamiento analitico, comunicac
 Deseable: Power BI, experimentacion A/B, estadistica basica y Git.`,
   cv: `CV: Estudiante de ingenieria con proyectos de analisis de datos en Python. Experiencia usando Pandas, SQL, Excel y Power BI. Proyecto destacado: dashboard de ventas con KPIs, limpieza de datos y presentacion a un equipo academico. Interes en producto, automatizacion y storytelling con datos.`,
 };
+
+setupSpeechRecognition();
+renderVoiceTranscript("");
 
 els.loadExample.addEventListener("click", () => {
   els.jobUrl.value = "https://empresa.demo/jobs/data-analyst-junior";
@@ -137,12 +148,14 @@ els.setupForm.addEventListener("submit", async (event) => {
 });
 
 els.prevQuestion.addEventListener("click", () => {
+  stopAnswerRecording();
   saveCurrentAnswer();
   state.current = Math.max(0, state.current - 1);
   renderQuestion();
 });
 
 els.nextQuestion.addEventListener("click", async () => {
+  stopAnswerRecording();
   saveCurrentAnswer();
   if (state.current === state.questions.length - 1) {
     await renderResults();
@@ -154,9 +167,15 @@ els.nextQuestion.addEventListener("click", async () => {
 });
 
 els.evaluateAnswer.addEventListener("click", async () => {
+  stopAnswerRecording();
   saveCurrentAnswer();
   const question = state.questions[state.current];
   const answer = state.answers.get(question.id)?.answer ?? "";
+
+  if (!answer) {
+    alert("Primero graba tu respuesta hablada para poder evaluarla.");
+    return;
+  }
 
   setButtonBusy(els.evaluateAnswer, true, "Evaluando...");
   try {
@@ -176,6 +195,7 @@ els.evaluateAnswer.addEventListener("click", async () => {
 });
 
 els.readQuestion.addEventListener("click", () => {
+  stopAnswerRecording();
   const utterance = new SpeechSynthesisUtterance(els.questionText.textContent);
   utterance.lang = "es-ES";
   speechSynthesis.cancel();
@@ -190,7 +210,25 @@ els.toggleCamera.addEventListener("click", async () => {
   await startCamera();
 });
 
+els.recordAnswer.addEventListener("click", () => {
+  if (state.isRecordingAnswer) {
+    stopAnswerRecording();
+    return;
+  }
+  startAnswerRecording();
+});
+
+els.clearAnswer.addEventListener("click", () => {
+  stopAnswerRecording();
+  state.finalTranscript = "";
+  state.activeTranscript = "";
+  saveCurrentAnswer("");
+  renderVoiceTranscript("");
+  els.feedbackBox.classList.add("hidden");
+});
+
 els.backButton.addEventListener("click", () => {
+  stopAnswerRecording();
   if (!els.resultsView.classList.contains("hidden")) {
     showView("interview");
     return;
@@ -202,12 +240,14 @@ els.backButton.addEventListener("click", () => {
 });
 
 els.restartInterview.addEventListener("click", () => {
+  stopAnswerRecording();
   stopCamera();
   stopTimer();
   showView("setup");
 });
 
 els.reviewInterview.addEventListener("click", () => {
+  stopAnswerRecording();
   showView("interview");
   renderQuestion();
 });
@@ -228,7 +268,9 @@ function renderQuestion() {
   els.questionReason.textContent = question.reason;
   els.questionText.textContent = question.question;
   els.questionHint.textContent = question.hint;
-  els.answerInput.value = saved?.answer ?? "";
+  state.finalTranscript = saved?.answer ?? "";
+  state.activeTranscript = "";
+  renderVoiceTranscript(state.finalTranscript);
 
   if (saved?.feedback) {
     renderFeedback(saved.feedback);
@@ -237,13 +279,128 @@ function renderQuestion() {
   }
 }
 
-function saveCurrentAnswer() {
+function saveCurrentAnswer(answerOverride = null) {
   const question = state.questions[state.current];
   const previous = state.answers.get(question.id);
+  const answer = answerOverride ?? getCurrentTranscript();
   state.answers.set(question.id, {
-    answer: els.answerInput.value.trim(),
+    answer,
     feedback: previous?.feedback,
   });
+}
+
+function getCurrentTranscript() {
+  return [state.finalTranscript, state.activeTranscript].filter(Boolean).join(" ").trim();
+}
+
+function setupSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    els.voiceStatus.textContent = "Voz no soportada";
+    els.voiceTranscript.textContent = "Este navegador no soporta transcripcion por voz. Prueba con Chrome o Edge.";
+    els.recordAnswer.disabled = true;
+    els.evaluateAnswer.disabled = true;
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "es-PE";
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.addEventListener("start", () => {
+    state.isRecordingAnswer = true;
+    els.recordAnswer.setAttribute("aria-pressed", "true");
+    els.voicePanel.classList.add("recording");
+    els.voiceStatus.textContent = "Grabando";
+  });
+
+  recognition.addEventListener("result", (event) => {
+    let interim = "";
+
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      const transcript = event.results[index][0]?.transcript?.trim() ?? "";
+      if (!transcript) continue;
+
+      if (event.results[index].isFinal) {
+        appendFinalTranscript(transcript);
+      } else {
+        interim = `${interim} ${transcript}`.trim();
+      }
+    }
+
+    state.activeTranscript = interim;
+    renderVoiceTranscript(getCurrentTranscript());
+    saveCurrentAnswer();
+  });
+
+  recognition.addEventListener("end", () => {
+    state.isRecordingAnswer = false;
+    state.activeTranscript = "";
+    els.recordAnswer.setAttribute("aria-pressed", "false");
+    els.voicePanel.classList.remove("recording");
+    els.voiceStatus.textContent = getCurrentTranscript() ? "Respuesta capturada" : "Listo para grabar";
+    renderVoiceTranscript(getCurrentTranscript());
+  });
+
+  recognition.addEventListener("error", (event) => {
+    state.isRecordingAnswer = false;
+    els.recordAnswer.setAttribute("aria-pressed", "false");
+    els.voicePanel.classList.remove("recording");
+    els.voiceStatus.textContent = getSpeechErrorMessage(event.error);
+  });
+
+  state.speechRecognition = recognition;
+}
+
+function startAnswerRecording() {
+  if (!state.speechRecognition || state.isRecordingAnswer) return;
+
+  speechSynthesis.cancel();
+  state.activeTranscript = "";
+
+  try {
+    state.speechRecognition.start();
+  } catch (error) {
+    console.warn(error);
+  }
+}
+
+function stopAnswerRecording() {
+  if (!state.speechRecognition || !state.isRecordingAnswer) return;
+  if (state.activeTranscript) {
+    appendFinalTranscript(state.activeTranscript);
+    state.activeTranscript = "";
+    renderVoiceTranscript(getCurrentTranscript());
+    saveCurrentAnswer();
+  }
+  state.speechRecognition.stop();
+}
+
+function appendFinalTranscript(transcript) {
+  const clean = transcript.trim();
+  if (!clean) return;
+
+  const current = state.finalTranscript.trim();
+  if (current.toLowerCase().endsWith(clean.toLowerCase())) return;
+
+  state.finalTranscript = `${current} ${clean}`.trim();
+}
+
+function renderVoiceTranscript(transcript) {
+  els.voiceTranscript.textContent = transcript || "Pulsa grabar y responde en voz alta.";
+  els.evaluateAnswer.disabled = !transcript.trim();
+}
+
+function getSpeechErrorMessage(error) {
+  const messages = {
+    "not-allowed": "Permiso de microfono denegado",
+    "no-speech": "No se detecto voz",
+    "audio-capture": "Microfono no disponible",
+    network: "Error de red en transcripcion",
+  };
+  return messages[error] ?? "No se pudo transcribir";
 }
 
 function renderFeedback(feedback) {

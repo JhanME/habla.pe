@@ -153,7 +153,7 @@ footer,
 }
 
 .field span,
-.answer-area span {
+.voice-header span {
   font-family: var(--font-app-mono);
   font-weight: 700;
   font-size: .92rem;
@@ -444,14 +444,89 @@ textarea:focus {
   gap: 12px;
 }
 
-.answer-area {
+.voice-answer {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.answer-area textarea {
-  min-height: 160px;
+.voice-header,
+.voice-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.voice-header strong {
+  color: var(--muted);
+  font-family: var(--font-app-mono);
+  font-size: .82rem;
+}
+
+.voice-panel {
+  min-height: 150px;
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+}
+
+.record-button {
+  width: 64px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: var(--shadow-card);
+}
+
+.record-button span {
+  width: 18px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-full);
+  background: #ef4444;
+}
+
+.record-button[aria-pressed="true"] {
+  background: #dc2626;
+  box-shadow: 0 0 0 8px color-mix(in oklab, #dc2626 18%, transparent), var(--shadow-card);
+}
+
+.record-button[aria-pressed="true"] span {
+  width: 18px;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.record-button:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
+.voice-panel p {
+  min-height: 82px;
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-app-mono);
+  font-size: .95rem;
+  line-height: 1.5;
+}
+
+.voice-panel.recording {
+  border-color: color-mix(in oklab, #dc2626 52%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, #dc2626 13%, transparent);
+}
+
+.voice-actions {
+  justify-content: flex-end;
 }
 
 .feedback-box {

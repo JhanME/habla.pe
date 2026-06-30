@@ -103,10 +103,21 @@
           <h2 id="questionText"></h2>
           <p id="questionHint"></p>
 
-          <label class="answer-area">
-            <span>Tu respuesta</span>
-            <textarea id="answerInput" rows="7" placeholder="Escribe como si estuvieras respondiendo en vivo..."></textarea>
-          </label>
+          <section class="voice-answer" aria-labelledby="voiceAnswerTitle">
+            <div class="voice-header">
+              <span id="voiceAnswerTitle">Respuesta hablada</span>
+              <strong id="voiceStatus">Listo para grabar</strong>
+            </div>
+            <div class="voice-panel" id="voicePanel">
+              <button class="record-button" id="recordAnswer" type="button" aria-pressed="false">
+                <span aria-hidden="true"></span>
+              </button>
+              <p id="voiceTranscript">Pulsa grabar y responde en voz alta.</p>
+            </div>
+            <div class="voice-actions">
+              <button class="ghost-button compact" id="clearAnswer" type="button">Limpiar</button>
+            </div>
+          </section>
 
           <div class="feedback-box hidden" id="feedbackBox">
             <div>
