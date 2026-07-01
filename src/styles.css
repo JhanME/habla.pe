@@ -231,11 +231,38 @@ textarea:focus {
 
 .progress-row {
   display: grid;
-  grid-template-columns: 1fr 72px;
-  gap: 12px;
+  grid-template-columns: 1fr auto 72px;
+  gap: 10px;
   align-items: center;
   width: min(1280px, 100%);
   margin: 0 auto 10px;
+}
+
+.progress-row-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ai-upgrade-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  white-space: nowrap;
+  animation: badge-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .progress-track {
@@ -498,14 +525,25 @@ textarea:focus {
 }
 
 .question-overlay-box {
-  top: 18px;
+  top: 14px;
   left: 50%;
-  width: min(780px, calc(100% - 84px));
-  min-width: 360px;
-  max-height: 164px;
-  padding: 14px 18px;
-  overflow: hidden;
+  width: min(540px, calc(100% - 84px));
+  min-width: 280px;
+  max-height: 28vh;
+  padding: 10px 14px;
+  overflow-y: auto;
   transform: translateX(-50%);
+}
+
+.question-type-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
 }
 
 .question-box-header {
@@ -523,10 +561,10 @@ textarea:focus {
 }
 
 .question-overlay-box h2 {
-  margin: 0 0 6px;
-  font-size: clamp(1rem, 1.35vw, 1.32rem);
-  line-height: 1.25;
-  font-weight: 700;
+  margin: 0;
+  font-size: clamp(0.8rem, 1.1vw, 1rem);
+  line-height: 1.35;
+  font-weight: 600;
 }
 
 .question-overlay-box p {
@@ -577,12 +615,11 @@ textarea:focus {
 }
 
 .voice-panel {
-  min-height: 76px;
-  display: grid;
-  grid-template-columns: 52px 1fr;
+  min-height: 64px;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 14px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border: 1px solid rgba(17, 24, 39, .12);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, .48);
@@ -971,5 +1008,189 @@ footer {
   .primary-button,
   .ghost-button {
     border-color: #f8fafc;
+  }
+}
+
+/* --- REPRODUCTOR COMPACTO Y DINÁMICO DE AUDIO --- */
+.record-button-styled {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: #ef4444;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+  transition: all 0.2s ease;
+}
+
+.record-button-styled:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+}
+
+.record-icon {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+  margin-right: 6px;
+  transition: all 0.2s ease;
+}
+
+.record-button-styled[aria-pressed="true"] {
+  background: #111827;
+  box-shadow: var(--shadow-soft);
+}
+
+.record-button-styled[aria-pressed="true"] .record-icon {
+  border-radius: 1px;
+}
+
+.record-button-styled .record-text-detener { display: none; }
+.record-button-styled .record-text-grabar { display: inline; }
+.record-button-styled[aria-pressed="true"] .record-text-grabar { display: none; }
+.record-button-styled[aria-pressed="true"] .record-text-detener { display: inline; }
+
+.live-badge {
+  display: none !important;
+}
+
+.rec-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.voice-visualizer {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 28px;
+  width: 44px;
+  flex-shrink: 0;
+}
+
+.voice-visualizer .bar {
+  display: inline-block;
+  width: 3px;
+  height: 4px;
+  background: #10b981;
+  border-radius: 2px;
+  transition: height 0.08s ease;
+}
+
+/* Estados dinámicos de la barra de grabación */
+
+/* 1. Estado Idle (Sin respuesta) */
+.recording-overlay-box.is-idle {
+  width: auto;
+  max-width: 250px;
+  min-width: 180px;
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+}
+.recording-overlay-box.is-idle .evaluate-trigger-btn,
+.recording-overlay-box.is-idle .answer-meta-row,
+.recording-overlay-box.is-idle .voice-visualizer {
+  display: none !important;
+}
+
+/* 2. Estado Grabando (Visualizador + Botón detener) */
+.recording-overlay-box.is-recording {
+  width: auto;
+  max-width: 250px;
+  min-width: 180px;
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+}
+.recording-overlay-box.is-recording .nav-arrow,
+.recording-overlay-box.is-recording .evaluate-trigger-btn,
+.recording-overlay-box.is-recording .answer-meta-row {
+  display: none !important;
+}
+.recording-overlay-box.is-recording .voice-visualizer {
+  display: flex;
+}
+
+/* 3. Estado con respuesta grabada (Aparece Evaluar) */
+.recording-overlay-box.is-has-answer {
+  width: min(780px, calc(100% - 84px));
+  min-width: 360px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+}
+.recording-overlay-box.is-has-answer .voice-visualizer {
+  display: none !important;
+}
+.recording-overlay-box.is-has-answer .record-button-styled {
+  background: #4b5563;
+  box-shadow: none;
+}
+.recording-overlay-box.is-has-answer .record-button-styled:hover {
+  background: #374151;
+}
+
+/* Fila de metadatos */
+.answer-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.answer-meta-row #speechMetrics {
+  font-family: var(--font-mono);
+}
+.clear-link-btn {
+  background: transparent;
+  border: 0;
+  color: #ef4444;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.clear-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Ajustes adaptables móviles */
+@media (max-width: 820px) {
+  .recording-overlay-box.is-idle,
+  .recording-overlay-box.is-recording,
+  .recording-overlay-box.is-has-answer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border-radius: var(--radius-md) !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .recording-overlay-box.is-has-answer .record-button-styled {
+    background: #374151;
+    color: #f8fafc;
+  }
+  .recording-overlay-box.is-has-answer .record-button-styled:hover {
+    background: #4b5563;
+  }
+  .answer-meta-row {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+  .clear-link-btn {
+    color: #fca5a5;
   }
 }

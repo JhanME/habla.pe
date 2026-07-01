@@ -51,6 +51,16 @@ async function handleApi(request, response, url) {
     return;
   }
 
+  if (url.pathname === "/api/interview/questions/quick") {
+    // Returns fallback questions instantly — no AI call
+    const { jobText = "", cvText = "", jobUrl = "" } = body;
+    writeJson(response, 200, {
+      source: "fallback",
+      questions: fallbackQuestions(jobText, cvText, jobUrl),
+    });
+    return;
+  }
+
   if (url.pathname === "/api/interview/feedback") {
     const result = await evaluateInterviewAnswer(body);
     writeJson(response, 200, result);

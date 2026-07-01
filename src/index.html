@@ -15,14 +15,13 @@
         <button class="icon-button" id="backButton" type="button" title="Volver" aria-label="Volver">
           <span aria-hidden="true">&lt;</span>
         </button>
-        <h1>Calentamiento de entrevistas</h1>
+        <h1>Habla.pe</h1>
         <div class="avatar" aria-label="Usuario">J</div>
       </header>
 
       <section class="setup-view" id="setupView" aria-labelledby="setupTitle">
         <div class="intro-line">
           <p id="setupTitle">Prepara una entrevista desde una vacante y tu CV.</p>
-          <span>Gemini + vision local</span>
         </div>
 
         <form class="setup-grid" id="setupForm">
@@ -77,6 +76,15 @@
           <div class="progress-track" aria-hidden="true">
             <div class="progress-fill" id="progressFill"></div>
           </div>
+          <div class="progress-row-actions">
+            <button class="icon-button compact-control" id="readQuestion" type="button" title="Leer pregunta" aria-label="Leer pregunta">
+              <span aria-hidden="true">Audio</span>
+            </button>
+            <button class="icon-button compact-control" id="toggleCamera" type="button" title="Activar camara" aria-label="Activar camara">
+              <span aria-hidden="true">Cam</span>
+            </button>
+            <span class="ai-upgrade-badge hidden" id="aiUpgradeBadge" aria-live="polite">✦ Personalizando con IA...</span>
+          </div>
           <span id="timer">120:00</span>
         </div>
 
@@ -89,7 +97,6 @@
               <div class="portrait-guide"></div>
               <div class="eye-line-guide"></div>
             </div>
-            <div class="live-badge" aria-hidden="true"><span></span> LIVE</div>
             <div class="camera-status" id="cameraStatus">Encuadre pendiente</div>
             <div class="metrics-panel" aria-label="Metricas visuales">
               <span id="presenceMetric">Presencia: --</span>
@@ -100,52 +107,53 @@
 
           <article class="question-overlay-box">
             <div class="question-box-header">
-              <div class="question-meta">
-                <span id="questionType">Q1</span>
-                <span id="questionReason">Personalizada para el rol</span>
-              </div>
-              <div class="question-actions">
-                <button class="icon-button compact-control" id="readQuestion" type="button" title="Leer pregunta" aria-label="Leer pregunta">
-                  <span aria-hidden="true">Audio</span>
-                </button>
-                <button class="icon-button compact-control" id="toggleCamera" type="button" title="Activar camara" aria-label="Activar camara">
-                  <span aria-hidden="true">Cam</span>
-                </button>
-              </div>
+              <span id="questionType" class="question-type-badge">Q1</span>
             </div>
             <h2 id="questionText">Cargando pregunta...</h2>
-            <p id="questionHint"></p>
+            <p id="questionHint" class="hidden"></p>
+            <span id="questionReason" class="hidden"></span>
           </article>
 
-          <article class="recording-overlay-box">
-            <section class="voice-answer" aria-labelledby="voiceAnswerTitle">
-              <div class="voice-header">
-                <span id="voiceAnswerTitle">Respuesta hablada</span>
-                <strong id="voiceStatus">Listo para grabar</strong>
-              </div>
-              <div class="voice-panel" id="voicePanel">
-                <button class="record-button" id="recordAnswer" type="button" aria-pressed="false">
-                  <span aria-hidden="true"></span>
-                </button>
-                <p id="voiceTranscript">Pulsa grabar y responde en voz alta.</p>
-              </div>
-              <div class="voice-actions">
-                <span id="speechMetrics">Muletillas: 0 · Pausas largas: 0</span>
-                <button class="ghost-button compact" id="clearAnswer" type="button">Limpiar</button>
-              </div>
-            </section>
-
-            <nav class="card-controls" aria-label="Controles de entrevista">
-              <button class="icon-button" id="prevQuestion" type="button" title="Pregunta anterior" aria-label="Pregunta anterior">
+          <article class="recording-overlay-box is-idle" id="recordingOverlay">
+            <!-- Fila de controles (siempre flex row) -->
+            <div class="rec-controls-row">
+              <button class="icon-button nav-arrow" id="prevQuestion" type="button" title="Pregunta anterior" aria-label="Pregunta anterior">
                 <span aria-hidden="true">&lt;</span>
               </button>
-              <div class="center-controls">
-                <button class="primary-button compact" id="evaluateAnswer" type="button">Evaluar con IA</button>
+
+              <!-- Visualizador de voz (solo en is-recording) -->
+              <div class="voice-visualizer" id="voiceVisualizer" aria-hidden="true">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
               </div>
-              <button class="icon-button" id="nextQuestion" type="button" title="Siguiente pregunta" aria-label="Siguiente pregunta">
+
+              <!-- Botón grabar / detener -->
+              <button class="record-button-styled" id="recordAnswer" type="button" aria-pressed="false">
+                <span class="record-icon" aria-hidden="true"></span>
+                <span class="record-text-grabar">Grabar</span>
+                <span class="record-text-detener">Detener</span>
+              </button>
+
+              <!-- Botón evaluar (solo en is-has-answer) -->
+              <button class="primary-button compact evaluate-trigger-btn" id="evaluateAnswer" type="button">
+                Evaluar con IA
+              </button>
+
+              <button class="icon-button nav-arrow" id="nextQuestion" type="button" title="Siguiente pregunta" aria-label="Siguiente pregunta">
                 <span aria-hidden="true">&gt;</span>
               </button>
-            </nav>
+            </div>
+
+            <!-- Métricas (solo en is-has-answer) -->
+            <div class="answer-meta-row">
+              <span id="speechMetrics">Muletillas: 0 · Pausas largas: 0</span>
+              <button class="clear-link-btn" id="clearAnswer" type="button">Limpiar</button>
+            </div>
+
+            <p id="voiceTranscript" class="hidden"></p>
           </article>
 
           <article class="feedback-overlay-box minimized" id="feedbackSidebar">

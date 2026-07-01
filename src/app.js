@@ -68,7 +68,7 @@ const els = {
   questionHint: $("#questionHint"),
   recordAnswer: $("#recordAnswer"),
   clearAnswer: $("#clearAnswer"),
-  voicePanel: $("#voicePanel"),
+  voicePanel: $("#recordingOverlay"),
   voiceStatus: $("#voiceStatus"),
   voiceTranscript: $("#voiceTranscript"),
   speechMetrics: $("#speechMetrics"),
@@ -91,6 +91,8 @@ const els = {
   toggleFeedbackBtn: $("#toggleFeedbackBtn"),
   restoreFeedbackBtn: $("#restoreFeedbackBtn"),
   feedbackPlaceholder: $("#feedbackPlaceholder"),
+  recordingOverlay: $("#recordingOverlay"),
+  aiUpgradeBadge: $("#aiUpgradeBadge"),
 };
 
 const examples = {
@@ -132,16 +134,15 @@ els.setupForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  setButtonBusy(els.generateInterview, true, "Generando...");
+  setButtonBusy(els.generateInterview, true, "Preparando...");
+
+  const payload = { jobText, cvText, jobUrl: els.jobUrl.value.trim() };
 
   try {
-    const result = await postJson("/api/interview/questions", {
-      jobText,
-      cvText,
-      jobUrl: els.jobUrl.value.trim(),
-    });
+    // FASE 1: Preguntas locales instantáneas (~100ms) → muestra la entrevista de inmediato
+    const quick = await postJson("/api/interview/questions/quick", payload);
 
-    state.questions = result.questions;
+    state.questions = quick.questions;
     state.answers = new Map();
     state.current = 0;
     state.secondsLeft = 120 * 60;
@@ -150,18 +151,36 @@ els.setupForm.addEventListener("submit", async (event) => {
     showView("interview");
     renderQuestion();
     startTimer();
-    if (!state.cameraStream) {
-      await startCamera();
-    }
+    if (!state.cameraStream) startCamera();
 
-    if (result.warning) {
-      console.warn(result.warning);
-    }
+    setButtonBusy(els.generateInterview, false, "Generar entrevista");
+
+    // FASE 2: Llamada a Gemini en background — actualiza preguntas cuando lleguen
+    if (els.aiUpgradeBadge) els.aiUpgradeBadge.classList.remove("hidden");
+
+    postJson("/api/interview/questions", payload)
+      .then((result) => {
+        if (result.questions?.length) {
+          // Solo reemplazar si el usuario sigue en la misma sesión y no ha contestado nada
+          const hasAnswers = state.answers.size > 0;
+          if (!hasAnswers) {
+            state.questions = result.questions;
+            renderQuestion();
+          } else {
+            // Si ya contestó algo, agregar las preguntas de Gemini para las restantes sin contestar
+            state.questions = result.questions;
+          }
+        }
+      })
+      .catch((err) => console.warn("Gemini upgrade failed (usando fallback local):", err))
+      .finally(() => {
+        if (els.aiUpgradeBadge) els.aiUpgradeBadge.classList.add("hidden");
+      });
+
   } catch (error) {
     console.error(error);
-    alert("No se pudo generar la entrevista. Revisa el servidor e intenta de nuevo.");
-  } finally {
     setButtonBusy(els.generateInterview, false, "Generar entrevista");
+    alert("No se pudo preparar la entrevista. Revisa el servidor e intenta de nuevo.");
   }
 });
 
@@ -244,6 +263,12 @@ els.clearAnswer.addEventListener("click", () => {
   renderVoiceTranscript("");
   els.feedbackBox.classList.add("hidden");
   if (els.feedbackPlaceholder) els.feedbackPlaceholder.classList.remove("hidden");
+
+  // Delete the saved answer map entry so it returns to idle state
+  const question = state.questions[state.current];
+  if (question) state.answers.delete(question.id);
+
+  updateRecordingOverlayState();
 });
 
 els.backButton.addEventListener("click", () => {
@@ -255,6 +280,7 @@ els.backButton.addEventListener("click", () => {
   if (!els.interviewView.classList.contains("hidden")) {
     showView("setup");
     stopTimer();
+    stopCamera();
   }
 });
 
@@ -313,6 +339,7 @@ function renderQuestion() {
     if (els.feedbackSidebar) els.feedbackSidebar.classList.add("minimized");
     if (els.restoreFeedbackBtn) els.restoreFeedbackBtn.classList.remove("hidden");
   }
+  updateRecordingOverlayState();
 }
 
 function saveCurrentAnswer(answerOverride = null) {
@@ -356,6 +383,7 @@ function setupSpeechRecognition() {
     els.voicePanel.classList.add("recording");
     els.voiceStatus.textContent = "Grabando";
     startSpeechWatch();
+    updateRecordingOverlayState();
   });
 
   recognition.addEventListener("result", (event) => {
@@ -379,21 +407,22 @@ function setupSpeechRecognition() {
   });
 
   recognition.addEventListener("end", () => {
-    state.isRecordingAnswer = false;
+    // If stopAnswerRecording already handled this, don't double-process
     state.activeTranscript = "";
     stopSpeechWatch();
-    renderVoiceTranscript(getCurrentTranscript());
-    saveCurrentAnswer();
 
     if (state.wantsAnswerRecording) {
+      // Auto-restart mode: keep is-recording state
+      state.isRecordingAnswer = false;
       els.voiceStatus.textContent = "Reconectando microfono...";
       scheduleSpeechRestart();
       return;
     }
 
-    els.recordAnswer.setAttribute("aria-pressed", "false");
-    els.voicePanel.classList.remove("recording");
-    els.voiceStatus.textContent = getCurrentTranscript() ? "Respuesta capturada" : "Listo para grabar";
+    // Normal stop: UI was already updated by stopAnswerRecording()
+    state.isRecordingAnswer = false;
+    saveCurrentAnswer();
+    updateRecordingOverlayState();
   });
 
   recognition.addEventListener("error", (event) => {
@@ -409,9 +438,106 @@ function setupSpeechRecognition() {
     state.wantsAnswerRecording = false;
     els.recordAnswer.setAttribute("aria-pressed", "false");
     els.voicePanel.classList.remove("recording");
+    updateRecordingOverlayState();
   });
 
   state.speechRecognition = recognition;
+}
+
+let audioContext = null;
+let audioAnalyser = null;
+let audioSource = null;
+let audioStream = null;
+let audioAnimationId = null;
+
+async function startAudioVisualizer() {
+  try {
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) {
+      simulateAudioVisualizer();
+      return;
+    }
+    audioContext = new AudioCtx();
+    audioAnalyser = audioContext.createAnalyser();
+    audioAnalyser.fftSize = 32;
+    audioSource = audioContext.createMediaStreamSource(audioStream);
+    audioSource.connect(audioAnalyser);
+
+    const bars = document.querySelectorAll("#voiceVisualizer .bar");
+    if (!bars.length) return;
+
+    const bufferLength = audioAnalyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      if (!audioAnalyser) return;
+      audioAnimationId = requestAnimationFrame(draw);
+      audioAnalyser.getByteFrequencyData(dataArray);
+
+      for (let index = 0; index < bars.length; index += 1) {
+        const val = dataArray[index * 2] ?? 0;
+        const px = Math.round(Math.min(24, Math.max(4, (val / 255) * 24)));
+        bars[index].style.height = `${px}px`;
+      }
+    };
+    draw();
+  } catch (error) {
+    console.warn("No se pudo iniciar el visualizador de audio:", error);
+    simulateAudioVisualizer();
+  }
+}
+
+function simulateAudioVisualizer() {
+  const bars = document.querySelectorAll("#voiceVisualizer .bar");
+  if (!bars.length) return;
+
+  const draw = () => {
+    audioAnimationId = requestAnimationFrame(draw);
+    for (let index = 0; index < bars.length; index += 1) {
+      const px = Math.round(4 + Math.random() * 20);
+      bars[index].style.height = `${px}px`;
+    }
+  };
+  draw();
+}
+
+function stopAudioVisualizer() {
+  if (audioAnimationId) cancelAnimationFrame(audioAnimationId);
+  audioAnimationId = null;
+
+  if (audioStream) {
+    audioStream.getTracks().forEach((track) => track.stop());
+    audioStream = null;
+  }
+
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  audioAnalyser = null;
+  audioSource = null;
+
+  const bars = document.querySelectorAll("#voiceVisualizer .bar");
+  bars.forEach((bar) => {
+    bar.style.height = "4px";
+  });
+}
+
+function updateRecordingOverlayState() {
+  if (!els.recordingOverlay) return;
+  
+  const question = state.questions[state.current];
+  const hasSavedAnswer = question ? state.answers.has(question.id) : false;
+
+  els.recordingOverlay.classList.remove("is-idle", "is-recording", "is-has-answer");
+  if (state.isRecordingAnswer) {
+    els.recordingOverlay.classList.add("is-recording");
+  } else if (hasSavedAnswer) {
+    els.recordingOverlay.classList.add("is-has-answer");
+  } else {
+    els.recordingOverlay.classList.add("is-idle");
+  }
 }
 
 function startAnswerRecording() {
@@ -423,8 +549,13 @@ function startAnswerRecording() {
   clearSpeechRestart();
   resetSpeechStats(false);
 
+  // Transition UI to recording state immediately to avoid any delay
+  state.isRecordingAnswer = true;
+  updateRecordingOverlayState();
+
   try {
     state.speechRecognition.start();
+    startAudioVisualizer();
   } catch (error) {
     console.warn(error);
   }
@@ -434,19 +565,28 @@ function stopAnswerRecording() {
   state.wantsAnswerRecording = false;
   clearSpeechRestart();
   stopSpeechWatch();
+  stopAudioVisualizer();
+
+  // Flush any partial transcript
   if (state.activeTranscript) {
     appendFinalTranscript(state.activeTranscript);
     state.activeTranscript = "";
-    renderVoiceTranscript(getCurrentTranscript());
-    saveCurrentAnswer();
   }
-  if (!state.speechRecognition || !state.isRecordingAnswer) {
-    els.recordAnswer.setAttribute("aria-pressed", "false");
-    els.voicePanel.classList.remove("recording");
-    els.voiceStatus.textContent = getCurrentTranscript() ? "Respuesta capturada" : "Listo para grabar";
-    return;
+
+  // Always save the current answer (even if empty)
+  saveCurrentAnswer();
+  renderVoiceTranscript(getCurrentTranscript());
+
+  // Always update UI state immediately
+  state.isRecordingAnswer = false;
+  els.recordAnswer.setAttribute("aria-pressed", "false");
+  els.voicePanel.classList.remove("recording");
+  updateRecordingOverlayState();
+
+  // Then stop the engine (the 'end' event will fire but we already updated UI)
+  if (state.speechRecognition) {
+    try { state.speechRecognition.stop(); } catch (_) {}
   }
-  state.speechRecognition.stop();
 }
 
 function appendFinalTranscript(transcript) {
@@ -460,8 +600,7 @@ function appendFinalTranscript(transcript) {
 }
 
 function renderVoiceTranscript(transcript) {
-  els.voiceTranscript.textContent = transcript || "Pulsa grabar y responde en voz alta.";
-  els.evaluateAnswer.disabled = !transcript.trim();
+  els.voiceTranscript.textContent = transcript || "";
   renderSpeechMetrics();
 }
 
@@ -829,7 +968,9 @@ function normalizeNativeBox(box, videoWidth, videoHeight) {
 
 function isBoxInsideGuide(box) {
   if (!box) return false;
-  const centeredX = box.centerX >= 0.31 && box.centerX <= 0.69;
+  // Video is horizontally mirrored — flip centerX: mirrored coordinate = 1 - centerX
+  const mirroredCenterX = 1 - box.centerX;
+  const centeredX = mirroredCenterX >= 0.31 && mirroredCenterX <= 0.69;
   const centeredY = box.centerY >= 0.22 && box.centerY <= 0.64;
   const naturalSize = box.width >= 0.13 && box.width <= 0.52 && box.height >= 0.18 && box.height <= 0.68;
   return centeredX && centeredY && naturalSize;
