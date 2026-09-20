@@ -102,7 +102,78 @@ async function startCamera() {
   } catch (error) { console.error(error); els.cameraMessage.textContent = "Cámara o análisis corporal no disponible"; }
 }
 function poseLoop() { const run = () => { if (!state.stream) return; if (els.video.readyState >= 2 && state.pose) { const result = state.pose.detectForVideo(els.video, performance.now()); drawPose(result.landmarks?.[0]); } state.poseLoop = requestAnimationFrame(run); }; run(); }
-function drawPose(points) { const canvas = els.poseCanvas; canvas.width = els.video.videoWidth || 720; canvas.height = els.video.videoHeight || 960; const ctx = canvas.getContext("2d"); ctx.clearRect(0,0,canvas.width,canvas.height); state.poseSamples += 1; if (!points?.length) { els.posture.textContent = "Postura: fuera de encuadre"; return; } const key = [11,12,13,14,15,16,23,24,25,26,27,28]; const visible = key.filter((i) => (points[i]?.visibility ?? 1) > .55); if (visible.length >= 10) state.visibleBodySamples += 1; els.posture.textContent = visible.length >= 10 ? "Postura: cuerpo visible" : "Postura: ajusta el encuadre"; ctx.fillStyle="#ffffff"; key.forEach((i) => { const p=points[i]; if(!p)return;ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,5,0,Math.PI*2);ctx.fill(); }); const links=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];ctx.strokeStyle="rgba(255,255,255,.75)";ctx.lineWidth=3;links.forEach(([a,b])=>{ctx.beginPath();ctx.moveTo(points[a].x*canvas.width,points[a].y*canvas.height);ctx.lineTo(points[b].x*canvas.width,points[b].y*canvas.height);ctx.stroke();}); }
+function drawPose(points) {
+  const canvas = els.poseCanvas;
+  canvas.width = els.video.videoWidth || 720;
+  canvas.height = els.video.videoHeight || 960;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  state.poseSamples += 1;
+
+  if (!points?.length) {
+    els.posture.textContent = "Postura: fuera de encuadre";
+    return;
+  }
+
+  const bodyPoints = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+  const facePoints = [0, 2, 5, 7, 8, 9, 10];
+  const visible = bodyPoints.filter((index) => (points[index]?.visibility ?? 1) > .55);
+  if (visible.length >= 10) state.visibleBodySamples += 1;
+  els.posture.textContent = visible.length >= 10 ? "Postura: cuerpo visible" : "Postura: ajusta el encuadre";
+
+  ctx.strokeStyle = "rgba(255,255,255,.78)";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  const links = [
+    [7, 2], [2, 0], [0, 5], [5, 8], [9, 10],
+    [7, 11], [8, 12], [11, 12],
+    [11, 13], [13, 15], [12, 14], [14, 16],
+    [11, 23], [12, 24], [23, 24],
+    [23, 25], [25, 27], [24, 26], [26, 28],
+  ];
+  links.forEach(([from, to]) => {
+    const a = points[from];
+    const b = points[to];
+    if (!a || !b) return;
+    ctx.beginPath();
+    ctx.moveTo(a.x * canvas.width, a.y * canvas.height);
+    ctx.lineTo(b.x * canvas.width, b.y * canvas.height);
+    ctx.stroke();
+  });
+
+  drawHeadOutline(ctx, points, canvas.width, canvas.height);
+  ctx.fillStyle = "#ffffff";
+  [...facePoints, ...bodyPoints].forEach((index) => {
+    const point = points[index];
+    if (!point || (point.visibility ?? 1) < .35) return;
+    ctx.beginPath();
+    ctx.arc(point.x * canvas.width, point.y * canvas.height, index < 11 ? 3.5 : 5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawHeadOutline(ctx, points, width, height) {
+  const leftEar = points[7];
+  const rightEar = points[8];
+  const nose = points[0];
+  if (!leftEar || !rightEar || !nose) return;
+
+  const leftX = leftEar.x * width;
+  const rightX = rightEar.x * width;
+  const earY = ((leftEar.y + rightEar.y) / 2) * height;
+  const faceWidth = Math.max(24, Math.abs(rightX - leftX) * 1.35);
+  const faceHeight = faceWidth * 1.25;
+  const centerX = (leftX + rightX) / 2;
+  const centerY = earY - faceHeight * .08;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,.9)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, faceWidth / 2, faceHeight / 2, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
 function stopCamera() { if (state.poseLoop) cancelAnimationFrame(state.poseLoop); state.stream?.getTracks().forEach((track)=>track.stop()); state.pose?.close?.(); state.stream=null; }
 
 async function finishPresentation() {
