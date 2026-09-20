@@ -3,7 +3,7 @@
 .presentation-nav .brand { color: var(--fg); text-decoration: none; font: 800 1.3rem var(--font-display); }
 .presentation-nav .brand span { color: var(--fg); }
 .presentation-nav .avatar { justify-self: end; width: 42px; }
-.eyebrow { color: var(--amber); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.eyebrow { color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .presentation-setup { min-height: calc(100dvh - 82px); display: grid; grid-template-columns: .8fr 1.2fr; gap: 70px; align-items: center; max-width: 1120px; margin: auto; padding: 50px 0; }
 .setup-heading h1, .jury-view h1 { margin: 0 0 18px; font-size: clamp(2.7rem, 6vw, 5rem); line-height: .95; letter-spacing: -.045em; }
 .setup-heading > p:last-child { color: var(--muted); line-height: 1.7; }
@@ -44,7 +44,7 @@
 .jury-view { max-width: 900px; margin: auto; padding: 70px 0; }
 .jury-list { display: grid; gap: 12px; margin: 35px 0; }
 .jury-question, .report-card { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); }
-.jury-question span { color: var(--amber); font-weight: 800; }
+.jury-question span { color: var(--fg); font-weight: 800; }
 .jury-question p { margin: 8px 0 0; line-height: 1.6; }
 .report-card { margin: 30px 0; }
 .report-card strong { display: block; font: 800 3rem var(--font-display); margin: 8px 0; }
