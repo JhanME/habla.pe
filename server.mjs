@@ -57,6 +57,12 @@ async function handleApi(request, response, url) {
     return;
   }
 
+  if (url.pathname === "/api/presentation/review") {
+    const result = await reviewPresentation(body);
+    writeJson(response, 200, result);
+    return;
+  }
+
   writeJson(response, 404, { error: "not_found" });
 }
 
@@ -178,6 +184,31 @@ Reglas:
       feedback: fallbackFeedback(question, answer, speechStats, visualStats),
     };
   }
+}
+
+async function reviewPresentation({ juryRole = "Profesor universitario", rubric = "", slides = [], transcripts = [], speechStats = {}, bodyStats = {} }) {
+  const fallback = { score: 5, summary: "La práctica fue registrada, pero el jurado de IA no estuvo disponible.", questions: ["¿Cuál es la principal conclusión de tu exposición?", "¿Qué evidencia respalda tu propuesta?", "¿Cuál es la mayor limitación de tu trabajo?"], tips: ["Conecta cada diapositiva con una idea central.", "Incluye evidencia y resultados medibles.", "Ensaya respuestas breves para las posibles objeciones."] };
+  if (!geminiApiKey || !Array.isArray(slides) || !slides.length) return { source: "fallback", warning: "Gemini no está disponible.", review: fallback };
+  const slideContext = slides.slice(0, 60).map((slide, index) => `DIAPOSITIVA ${index + 1}\nContenido: ${String(slide).slice(0, 3500)}\nExposición: ${String(transcripts[index] ?? "").slice(0, 5000)}`).join("\n\n");
+  const prompt = `Actúa como ${juryRole} y evalúa una exposición oral en español.
+Rúbrica: ${rubric || "Evalúa claridad, dominio, estructura, evidencia y comunicación."}
+${slideContext}
+Métricas verbales: ${JSON.stringify(speechStats)}
+Métricas corporales: ${JSON.stringify(bodyStats)}
+Devuelve exclusivamente JSON válido con score entero de 1 a 10, summary, questions (3 a 5) y tips (3 a 5). No inventes contenido y usa la rúbrica como criterio principal.`;
+  try {
+    const data = await callGeminiJson(prompt);
+    return { source: "gemini", review: normalizePresentationReview(data) };
+  } catch (error) {
+    console.error("Gemini presentation review failed:", error);
+    return { source: "fallback", warning: "Gemini no pudo evaluar la presentación.", review: fallback };
+  }
+}
+
+function normalizePresentationReview(data) {
+  const questions = Array.isArray(data.questions) ? data.questions.map(String).filter(Boolean).slice(0, 5) : [];
+  const tips = Array.isArray(data.tips) ? data.tips.map(String).filter(Boolean).slice(0, 5) : [];
+  return { score: Math.max(1, Math.min(10, Math.round(Number(data.score) || 1))), summary: String(data.summary || "Evaluación completada."), questions: questions.length ? questions : ["¿Cuál es la conclusión principal de tu exposición?"], tips: tips.length ? tips : ["Refuerza la conexión entre el problema, la evidencia y tu conclusión."] };
 }
 
 async function callGeminiJson(prompt) {

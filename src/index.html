@@ -3,215 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Habla.pe - Calentamiento de Entrevistas</title>
+    <title>Habla.pe — Entrena cómo comunicas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./landing.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <header class="topbar" aria-label="Barra superior">
-        <button class="icon-button" id="backButton" type="button" title="Volver" aria-label="Volver">
-          <span aria-hidden="true">&lt;</span>
-        </button>
-        <h1>Habla.pe</h1>
+    <main class="landing-shell">
+      <nav class="landing-nav">
+        <a class="brand" href="./">Habla<span>.pe</span></a>
+        <span class="nav-copy">Entrena cómo comunicas</span>
         <div class="avatar" aria-label="Usuario">J</div>
-      </header>
+      </nav>
 
-      <section class="setup-view" id="setupView" aria-labelledby="setupTitle">
-        <div class="intro-line">
-          <p id="setupTitle">Prepara una entrevista desde una vacante y tu CV.</p>
-        </div>
-
-        <form class="setup-grid" id="setupForm">
-          <label class="field">
-            <span>Link de la vacante</span>
-            <input
-              id="jobUrl"
-              name="jobUrl"
-              type="url"
-              placeholder="https://empresa.com/jobs/data-analyst"
-              autocomplete="off"
-            />
-          </label>
-
-          <label class="field">
-            <span>CV en archivo</span>
-            <input id="cvFile" name="cvFile" type="file" accept=".txt,.md,.pdf" />
-            <small>TXT/MD se lee automatico. Si es PDF escaneado, pega el texto abajo.</small>
-          </label>
-
-          <label class="field text-field">
-            <span>Texto de la vacante</span>
-            <textarea
-              id="jobText"
-              name="jobText"
-              rows="10"
-              placeholder="Pega aqui descripcion, requisitos, responsabilidades y tecnologias..."
-              required
-            ></textarea>
-          </label>
-
-          <label class="field text-field">
-            <span>Texto del CV</span>
-            <textarea
-              id="cvText"
-              name="cvText"
-              rows="10"
-              placeholder="Pega experiencia, proyectos, skills, educacion y logros..."
-              required
-            ></textarea>
-          </label>
-
-          <div class="setup-actions">
-            <button class="primary-button" id="generateInterview" type="submit">Generar entrevista</button>
-            <button class="ghost-button" id="loadExample" type="button">Cargar ejemplo</button>
-          </div>
-        </form>
+      <section class="hero">
+        <p class="eyebrow">Tu coach de comunicación con IA</p>
+        <h1>Practica antes de que<br />importe de verdad.</h1>
+        <p class="hero-copy">Entrena entrevistas, exposiciones y pitches con feedback sobre lo que dices y cómo lo comunicas.</p>
       </section>
 
-      <section class="interview-view hidden" id="interviewView" aria-label="Entrevista">
-        <div class="progress-row">
-          <div class="progress-track" aria-hidden="true">
-            <div class="progress-fill" id="progressFill"></div>
+      <section class="mode-grid" aria-label="Modos de práctica">
+        <a class="mode-card featured" href="./presentacion.html">
+          <div class="mode-topline"><span class="mode-icon">▣</span><span class="new-badge">NUEVO</span></div>
+          <div>
+            <p class="mode-kicker">Modo expositor</p>
+            <h2>Practica tu sustentación</h2>
+            <p>Sube tu presentación, ensaya frente a cámara y responde preguntas de un jurado con IA.</p>
           </div>
-          <div class="progress-row-actions">
-            <button class="icon-button compact-control" id="readQuestion" type="button" title="Leer pregunta" aria-label="Leer pregunta">
-              <span aria-hidden="true">Audio</span>
-            </button>
-            <button class="icon-button compact-control" id="toggleCamera" type="button" title="Activar camara" aria-label="Activar camara">
-              <span aria-hidden="true">Cam</span>
-            </button>
-            <span class="ai-upgrade-badge hidden" id="aiUpgradeBadge" aria-live="polite">✦ Personalizando con IA...</span>
+          <span class="mode-cta">Comenzar práctica <b>→</b></span>
+        </a>
+
+        <a class="mode-card" href="./interview.html">
+          <div class="mode-topline"><span class="mode-icon">◎</span></div>
+          <div>
+            <p class="mode-kicker">Modo entrevista</p>
+            <h2>Prepárate para tu entrevista</h2>
+            <p>Genera preguntas desde tu CV y una vacante, responde en voz alta y recibe feedback.</p>
           </div>
-          <span id="timer">120:00</span>
-        </div>
-
-        <div class="interview-workspace">
-          <article class="camera-panel" id="cameraPanel">
-            <video id="cameraVideo" playsinline muted></video>
-            <canvas id="faceOverlay" aria-hidden="true"></canvas>
-            <div class="camera-placeholder" id="cameraPlaceholder">Camara inactiva</div>
-            <div class="face-guide" aria-hidden="true">
-              <div class="portrait-guide"></div>
-              <div class="eye-line-guide"></div>
-            </div>
-            <div class="camera-status" id="cameraStatus">Encuadre pendiente</div>
-            <div class="metrics-panel" aria-label="Metricas visuales">
-              <span id="presenceMetric">Presencia: --</span>
-              <span id="frameMetric">Encuadre: --</span>
-              <span id="gazeMetric">Mirada: --</span>
-            </div>
-          </article>
-
-          <article class="question-overlay-box">
-            <div class="question-box-header">
-              <span id="questionType" class="question-type-badge">Q1</span>
-            </div>
-            <h2 id="questionText">Cargando pregunta...</h2>
-            <p id="questionHint" class="hidden"></p>
-            <span id="questionReason" class="hidden"></span>
-          </article>
-
-          <article class="recording-overlay-box is-idle" id="recordingOverlay">
-            <!-- Fila de controles (siempre flex row) -->
-            <div class="rec-controls-row">
-              <button class="icon-button nav-arrow" id="prevQuestion" type="button" title="Pregunta anterior" aria-label="Pregunta anterior">
-                <span aria-hidden="true">&lt;</span>
-              </button>
-
-              <!-- Visualizador de voz (solo en is-recording) -->
-              <div class="voice-visualizer" id="voiceVisualizer" aria-hidden="true">
-                <span class="bar"></span>
-                <span class="bar"></span>
-                <span class="bar"></span>
-                <span class="bar"></span>
-                <span class="bar"></span>
-              </div>
-
-              <!-- Botón grabar / detener -->
-              <button class="record-button-styled" id="recordAnswer" type="button" aria-pressed="false">
-                <span class="record-icon" aria-hidden="true"></span>
-                <span class="record-text-grabar">Grabar</span>
-                <span class="record-text-detener">Detener</span>
-              </button>
-              <span id="voiceStatus" class="sr-only" aria-live="polite">Listo para grabar</span>
-
-              <!-- Botón evaluar (solo en is-has-answer) -->
-              <button class="primary-button compact evaluate-trigger-btn" id="evaluateAnswer" type="button">
-                Evaluar con IA
-              </button>
-
-              <button class="icon-button nav-arrow" id="nextQuestion" type="button" title="Siguiente pregunta" aria-label="Siguiente pregunta">
-                <span aria-hidden="true">&gt;</span>
-              </button>
-            </div>
-
-            <!-- Métricas (solo en is-has-answer) -->
-            <div class="answer-meta-row">
-              <span id="speechMetrics">Muletillas: 0 · Pausas largas: 0</span>
-              <button class="clear-link-btn" id="clearAnswer" type="button">Limpiar</button>
-            </div>
-
-            <p id="voiceTranscript" class="hidden"></p>
-          </article>
-
-          <article class="feedback-overlay-box minimized" id="feedbackSidebar">
-            <div class="sidebar-header">
-              <h3>Feedback de IA</h3>
-              <button class="icon-button close-sidebar" id="toggleFeedbackBtn" type="button" title="Minimizar feedback" aria-label="Minimizar feedback">
-                <span aria-hidden="true">x</span>
-              </button>
-            </div>
-
-            <div class="feedback-placeholder-box" id="feedbackPlaceholder">
-              <div class="placeholder-icon">IA</div>
-              <h4>Tu coach virtual</h4>
-              <p>Responde en voz alta y usa <strong>Evaluar con IA</strong> para recibir recomendaciones.</p>
-            </div>
-
-            <div class="feedback-box hidden" id="feedbackBox">
-              <div class="feedback-score-badge">
-                <span id="feedbackScore">Score --/10</span>
-              </div>
-              <p id="feedbackSummary"></p>
-              <ul id="feedbackList"></ul>
-            </div>
-          </article>
-
-          <button class="floating-feedback-toggle" id="restoreFeedbackBtn" type="button" title="Mostrar feedback de IA" aria-label="Mostrar feedback de IA">
-            <span>Ver feedback</span>
-          </button>
-        </div>
+          <span class="mode-cta">Entrenar entrevista <b>→</b></span>
+        </a>
       </section>
-
-      <section class="results-view hidden" id="resultsView" aria-labelledby="resultsTitle">
-        <article class="results-card">
-          <p class="eyebrow">Reporte final</p>
-          <h2 id="resultsTitle">Listo para practicar</h2>
-          <div class="score-circle" id="finalScore">--</div>
-          <p id="finalSummary"></p>
-          <div class="results-columns">
-            <div>
-              <h3>Fortalezas</h3>
-              <ul id="strengthsList"></ul>
-            </div>
-            <div>
-              <h3>Por mejorar</h3>
-              <ul id="improvementsList"></ul>
-            </div>
-          </div>
-          <div class="setup-actions">
-            <button class="primary-button" id="restartInterview" type="button">Nueva entrevista</button>
-            <button class="ghost-button" id="reviewInterview" type="button">Revisar respuestas</button>
-          </div>
-        </article>
-      </section>
-
-      <footer>© Calentamiento de entrevistas 2026</footer>
+      <footer>Habla.pe · Comunicación que se entrena</footer>
     </main>
-
-    <script src="./app.js" type="module"></script>
   </body>
 </html>

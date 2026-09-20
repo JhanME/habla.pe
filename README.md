@@ -62,6 +62,9 @@ Incluye:
 - Camara con overlay de encuadre en verde/rojo.
 - Tracking de mirada con MediaPipe Face Landmarker cuando esta disponible.
 - Fallback local sin Gemini y fallback visual con FaceDetector si MediaPipe no carga.
+- Landing con modos de entrevista y exposición.
+- Modo expositor con PDF, rúbrica opcional, timer, transcripción por diapositiva y seguimiento corporal.
+- Evaluación final y preguntas de un profesor o jurado generadas con Gemini.
 
 ## Voz
 

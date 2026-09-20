@@ -26,11 +26,13 @@ before(async () => {
 
 after(() => server?.kill());
 
-test("sirve la aplicación y conserva el estado accesible de voz", async () => {
+test("sirve la landing y conserva el estado accesible de voz en entrevistas", async () => {
   const response = await fetch(`${baseUrl}/`);
   const html = await response.text();
   assert.equal(response.status, 200);
-  assert.match(html, /id="voiceStatus"/);
+  assert.match(html, /Modo expositor/);
+  const interview = await fetch(`${baseUrl}/interview.html`);
+  assert.match(await interview.text(), /id="voiceStatus"/);
 });
 
 test("genera seis preguntas de contingencia con entrada vacía", async () => {
@@ -64,6 +66,18 @@ test("evalúa con contingencia una respuesta sin depender de Gemini", async () =
   assert.equal(response.status, 200);
   assert.equal(data.source, "fallback");
   assert.equal(typeof data.feedback.score, "number");
+});
+
+test("genera una revisión de exposición con preguntas de jurado", async () => {
+  const response = await fetch(`${baseUrl}/api/presentation/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slides: ["Problema y solución"], transcripts: ["Nuestra solución responde al problema"] }),
+  });
+  const data = await response.json();
+  assert.equal(response.status, 200);
+  assert.ok(data.review.questions.length >= 1);
+  assert.equal(typeof data.review.score, "number");
 });
 
 test("rechaza métodos no permitidos en la API", async () => {

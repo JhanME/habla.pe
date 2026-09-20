@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modo expositor — Habla.pe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" /><link rel="stylesheet" href="./presentation.css" />
+</head>
+<body>
+<main class="presentation-shell">
+  <nav class="presentation-nav"><a href="./" class="brand">Habla<span>.pe</span></a><span>Modo expositor</span><div class="avatar">J</div></nav>
+  <section id="presentationSetup" class="presentation-setup">
+    <div class="setup-heading"><p class="eyebrow">Nueva práctica</p><h1>Prepara el escenario.</h1><p>Tu presentación será el contexto del jurado y la guía de tu ensayo.</p></div>
+    <form id="presentationForm" class="presentation-form">
+      <label class="upload-zone"><span class="upload-icon">↑</span><strong>Sube tu presentación en PDF</strong><small id="fileName">Selecciona un archivo</small><input id="presentationFile" type="file" accept="application/pdf,.pdf" required /></label>
+      <div class="setup-fields">
+        <label class="field"><span>Tipo de jurado</span><select id="juryRole"><option>Profesor universitario</option><option>Jurado de hackatón</option><option>Jurado de tesis</option><option>Inversionista</option></select></label>
+        <label class="field"><span>Rúbrica o criterios (opcional)</span><textarea id="rubric" rows="5" placeholder="Pega aquí los criterios de evaluación..."></textarea></label>
+        <div class="timer-choice"><label><input id="useTimer" type="checkbox" /> Usar tiempo límite</label><label id="minutesField" class="field compact-field hidden"><span>Minutos</span><input id="timerMinutes" type="number" min="1" max="180" value="10" /></label></div>
+      </div>
+      <button class="primary-button" type="submit">Preparar práctica</button>
+    </form>
+  </section>
+
+  <section id="stageView" class="stage-view hidden">
+    <header class="stage-header"><button id="exitStage" class="ghost-button">← Salir</button><div><strong id="slideCounter">Diapositiva 1 / 1</strong><span id="stageStatus">Listo para presentar</span></div><time id="stageTimer">Sin límite</time></header>
+    <div class="stage-grid">
+      <article class="slide-stage"><canvas id="slideCanvas"></canvas><div class="slide-controls"><button id="prevSlide" class="ghost-button">← Anterior</button><button id="togglePractice" class="primary-button">Iniciar exposición</button><button id="nextSlide" class="ghost-button">Siguiente →</button></div></article>
+      <aside class="presenter-stage"><div class="camera-wrap"><video id="poseVideo" playsinline muted></video><canvas id="poseCanvas"></canvas><div id="cameraMessage">Cámara de cuerpo completo</div></div><div class="live-metrics"><span id="postureMetric">Postura: --</span><span id="speechMetric">Muletillas: 0 · Ritmo: 0 ppm</span></div><p id="liveTranscript">Tu transcripción aparecerá aquí.</p></aside>
+    </div>
+    <button id="finishPresentation" class="finish-button">Finalizar y pasar al jurado</button>
+  </section>
+
+  <section id="juryView" class="jury-view hidden"><p class="eyebrow">Ronda de preguntas</p><h1>El jurado tiene algunas preguntas.</h1><div id="juryQuestions" class="jury-list"></div><article class="report-card"><span>Evaluación general</span><strong id="presentationScore">--/10</strong><p id="presentationSummary"></p><ul id="presentationTips"></ul></article><a href="./presentacion.html" class="primary-button restart-link">Nueva práctica</a></section>
+</main>
+<script type="module" src="./presentation.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { LLMFeedbackModule } from "./modules/LLMFeedbackModule.js";
 import { averageFeedbackScore, nextQuestionIndex, previousQuestionIndex } from "./modules/InterviewSession.js";
+import { calculateSpeechMetrics } from "./modules/SpeechMetrics.js";
 
 const state = {
   questions: [],
@@ -284,7 +285,9 @@ els.backButton.addEventListener("click", () => {
     showView("setup");
     stopTimer();
     stopCamera();
+    return;
   }
+  window.location.href = "./";
 });
 
 els.restartInterview.addEventListener("click", () => {
@@ -714,21 +717,10 @@ function resetSpeechStats(clearTranscript = true) {
 
 function getSpeechStatsSnapshot() {
   const transcript = getCurrentTranscript();
-  const words = transcript.split(/\s+/).filter(Boolean);
-  const fillerMatches = transcript.match(/\b(e+h+|eh+|em+|mmm+|um+|este+|o sea|osea|tipo|bueno)\b/gi) ?? [];
   const durationSeconds = state.speechStats.startedAt
     ? Math.max(1, Math.round((Date.now() - state.speechStats.startedAt) / 1000))
     : 0;
-
-  return {
-    fillerCount: fillerMatches.length,
-    fillers: [...new Set(fillerMatches.map((item) => item.toLowerCase()))].slice(0, 8),
-    longPauses: state.speechStats.longPauses,
-    longestPauseSeconds: Math.round((state.speechStats.longestPauseMs / 1000) * 10) / 10,
-    durationSeconds,
-    wordsPerMinute: durationSeconds ? Math.round((words.length / durationSeconds) * 60) : 0,
-    wordCount: words.length,
-  };
+  return calculateSpeechMetrics(transcript, durationSeconds, state.speechStats);
 }
 
 function renderSpeechMetrics() {
