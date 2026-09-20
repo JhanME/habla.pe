@@ -17,10 +17,12 @@
 .timer-choice { display: flex; align-items: center; gap: 18px; }
 .compact-field { max-width: 120px; }
 .stage-view { padding: 18px 0 36px; }
-.stage-header { height: 64px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
-.stage-header > div { display: grid; text-align: center; }
-.stage-header span { color: var(--muted); font-size: .72rem; }
-.stage-header time { justify-self: end; font: 700 1rem var(--font-mono); }
+.stage-header { min-height: 64px; margin-bottom: 14px; padding: 10px 14px; display: grid; grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr); align-items: center; gap: 24px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); }
+.stage-header > .ghost-button { width: auto; min-height: 38px; padding: 0 14px; justify-self: start; font-size: .82rem; }
+.stage-header > div { display: grid; gap: 2px; text-align: center; }
+.stage-header strong { font-family: var(--font-display); font-size: .96rem; line-height: 1.2; }
+.stage-header span { color: var(--muted); font-size: .7rem; }
+.stage-header time { justify-self: end; padding: 8px 11px; border-radius: var(--radius-full); background: var(--panel-soft); font: 700 .78rem var(--font-mono); white-space: nowrap; }
 .stage-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(320px, .75fr); gap: 16px; }
 .slide-stage, .presenter-stage { background: #111827; border-radius: 20px; overflow: hidden; }
 .slide-stage { min-height: 620px; display: grid; grid-template-rows: 1fr auto; place-items: center; }
@@ -51,5 +53,5 @@
 .report-card li { margin: 8px 0; }
 .restart-link { display: inline-block; text-decoration: none; }
 .hidden { display: none !important; }
-@media (max-width: 900px) { .presentation-setup, .stage-grid { grid-template-columns: 1fr; } .presentation-setup { gap: 30px; } .stage-header { grid-template-columns: auto 1fr auto; } .slide-stage { min-height: 450px; } .camera-wrap { min-height: 360px; } }
+@media (max-width: 900px) { .presentation-setup, .stage-grid { grid-template-columns: 1fr; } .presentation-setup { gap: 30px; } .stage-header { grid-template-columns: auto 1fr auto; gap: 10px; } .slide-stage { min-height: 450px; } .camera-wrap { min-height: 360px; } }
 @media (max-width: 650px) { .slide-nav-button { min-width: 48px; } .slide-nav-button span, .slide-jump > span { display: none; } .slide-controls { gap: 8px; } .slide-stage { min-height: 0; } }
