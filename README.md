@@ -42,7 +42,10 @@ Si `GEMINI_API_KEY` no esta configurada o Gemini falla, el servidor usa un fallb
 - `src/index.html`: interfaz principal.
 - `src/styles.css`: estilos de la app y estados visuales de camara.
 - `src/app.js`: flujo de entrevista, llamadas al backend, camara, encuadre y mirada.
+- `src/modules/LLMFeedbackModule.js`: cliente centralizado para preguntas y feedback de IA.
+- `src/modules/InterviewSession.js`: reglas comprobables de navegación y cálculo del reporte.
 - `server.mjs`: servidor local, archivos estaticos y API Gemini.
+- `test/server.test.mjs`: pruebas de contrato HTTP y carga de la interfaz.
 - `package.json`: scripts para ejecutar el proyecto.
 
 ## Estado actual
@@ -73,3 +76,7 @@ La grabacion se reinicia automaticamente si el navegador corta una sesion de rec
 ## Siguiente fase
 
 Persistir sesiones y reportes para comparar progreso entre entrevistas.
+
+## Verificacion
+
+Ejecuta `npm.cmd test` para validar la interfaz base y los contratos principales del servidor.

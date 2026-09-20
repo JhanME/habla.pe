@@ -1,3 +1,6 @@
+import { LLMFeedbackModule } from "./modules/LLMFeedbackModule.js";
+import { averageFeedbackScore, nextQuestionIndex, previousQuestionIndex } from "./modules/InterviewSession.js";
+
 const state = {
   questions: [],
   answers: new Map(),
@@ -37,6 +40,9 @@ const state = {
     detector: "none",
   },
   gazeScoreBuffer: [],
+  isPreparing: false,
+  preparationTipId: null,
+  generationId: 0,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -137,69 +143,63 @@ els.setupForm.addEventListener("submit", async (event) => {
   setButtonBusy(els.generateInterview, true, "Preparando...");
 
   const payload = { jobText, cvText, jobUrl: els.jobUrl.value.trim() };
+  const generationId = ++state.generationId;
 
   try {
-    // FASE 1: Preguntas locales instantáneas (~100ms) → muestra la entrevista de inmediato
-    const quick = await postJson("/api/interview/questions/quick", payload);
-
-    state.questions = quick.questions;
+    state.questions = [];
     state.answers = new Map();
     state.current = 0;
     state.secondsLeft = 120 * 60;
     resetVisualSamples();
 
     showView("interview");
-    renderQuestion();
-    startTimer();
+    showPreparationTips();
     if (!state.cameraStream) startCamera();
 
-    setButtonBusy(els.generateInterview, false, "Generar entrevista");
+    const result = await LLMFeedbackModule.generateQuestions(payload);
+    if (generationId !== state.generationId) return;
+    if (!result.questions?.length) throw new Error("No se recibieron preguntas");
 
-    // FASE 2: Llamada a Gemini en background — actualiza preguntas cuando lleguen
-    if (els.aiUpgradeBadge) els.aiUpgradeBadge.classList.remove("hidden");
-
-    postJson("/api/interview/questions", payload)
-      .then((result) => {
-        if (result.questions?.length) {
-          // Solo reemplazar si el usuario sigue en la misma sesión y no ha contestado nada
-          const hasAnswers = state.answers.size > 0;
-          if (!hasAnswers) {
-            state.questions = result.questions;
-            renderQuestion();
-          } else {
-            // Si ya contestó algo, agregar las preguntas de Gemini para las restantes sin contestar
-            state.questions = result.questions;
-          }
-        }
-      })
-      .catch((err) => console.warn("Gemini upgrade failed (usando fallback local):", err))
-      .finally(() => {
-        if (els.aiUpgradeBadge) els.aiUpgradeBadge.classList.add("hidden");
-      });
+    if (result.source !== "gemini") {
+      throw new Error(result.warning ?? "Gemini no pudo generar las preguntas. Intenta nuevamente.");
+    }
+    state.questions = result.questions;
+    stopPreparationTips();
+    renderQuestion();
+    startTimer();
 
   } catch (error) {
     console.error(error);
-    setButtonBusy(els.generateInterview, false, "Generar entrevista");
-    alert("No se pudo preparar la entrevista. Revisa el servidor e intenta de nuevo.");
+    if (generationId === state.generationId) {
+      stopPreparationTips();
+      showView("setup");
+      stopCamera();
+      alert(error.message || "No se pudo preparar la entrevista. Intenta nuevamente.");
+    }
+  } finally {
+    if (generationId === state.generationId) {
+      setButtonBusy(els.generateInterview, false, "Generar entrevista");
+    }
   }
 });
 
 els.prevQuestion.addEventListener("click", () => {
   stopAnswerRecording();
   saveCurrentAnswer();
-  state.current = Math.max(0, state.current - 1);
+  state.current = previousQuestionIndex(state.current);
   renderQuestion();
 });
 
 els.nextQuestion.addEventListener("click", async () => {
   stopAnswerRecording();
   saveCurrentAnswer();
-  if (state.current === state.questions.length - 1) {
+  const nextIndex = nextQuestionIndex(state.current, state.questions.length);
+  if (nextIndex === null) {
     await renderResults();
     showView("results");
     return;
   }
-  state.current += 1;
+  state.current = nextIndex;
   renderQuestion();
 });
 
@@ -216,12 +216,12 @@ els.evaluateAnswer.addEventListener("click", async () => {
 
   setButtonBusy(els.evaluateAnswer, true, "Evaluando...");
   try {
-    const result = await postJson("/api/interview/feedback", {
+    const result = await LLMFeedbackModule.evaluateAnswer(
       question,
       answer,
-      speechStats: getSpeechStatsSnapshot(),
-      visualStats: getVisualStatsSnapshot(),
-    });
+      getSpeechStatsSnapshot(),
+      getVisualStatsSnapshot(),
+    );
     state.answers.set(question.id, { answer, speechStats: getSpeechStatsSnapshot(), feedback: result.feedback });
     renderFeedback(result.feedback);
   } catch (error) {
@@ -278,6 +278,9 @@ els.backButton.addEventListener("click", () => {
     return;
   }
   if (!els.interviewView.classList.contains("hidden")) {
+    state.generationId += 1;
+    stopPreparationTips();
+    setButtonBusy(els.generateInterview, false, "Generar entrevista");
     showView("setup");
     stopTimer();
     stopCamera();
@@ -314,6 +317,46 @@ function showView(view) {
   els.setupView.classList.toggle("hidden", view !== "setup");
   els.interviewView.classList.toggle("hidden", view !== "interview");
   els.resultsView.classList.toggle("hidden", view !== "results");
+}
+
+const preparationTips = [
+  "Colócate a la altura de la cámara y deja un poco de espacio sobre tu cabeza.",
+  "Prepara ejemplos concretos con contexto, acción y resultado.",
+  "Habla con calma: una pausa breve transmite más seguridad que una muletilla.",
+  "Mira hacia la cámara al explicar tus logros y decisiones importantes.",
+  "Cuantifica el impacto de tu trabajo siempre que tengas una métrica disponible.",
+];
+
+function showPreparationTips() {
+  stopPreparationTips();
+  state.isPreparing = true;
+  els.interviewView.classList.add("is-preparing");
+  if (els.aiUpgradeBadge) {
+    els.aiUpgradeBadge.textContent = "✦ Creando tu entrevista con IA...";
+    els.aiUpgradeBadge.classList.remove("hidden");
+  }
+  els.progressFill.style.width = "0%";
+  els.questionType.textContent = "PREPARACIÓN";
+  els.questionReason.textContent = "";
+  els.questionHint.classList.remove("hidden");
+  els.questionHint.textContent = "Gemini está analizando tu CV y la vacante.";
+
+  let tipIndex = 0;
+  const renderTip = () => {
+    els.questionText.textContent = preparationTips[tipIndex];
+    tipIndex = (tipIndex + 1) % preparationTips.length;
+  };
+  renderTip();
+  state.preparationTipId = window.setInterval(renderTip, 4000);
+}
+
+function stopPreparationTips() {
+  if (state.preparationTipId) window.clearInterval(state.preparationTipId);
+  state.preparationTipId = null;
+  state.isPreparing = false;
+  els.interviewView.classList.remove("is-preparing");
+  els.questionHint.classList.add("hidden");
+  if (els.aiUpgradeBadge) els.aiUpgradeBadge.classList.add("hidden");
 }
 
 function renderQuestion() {
@@ -735,30 +778,31 @@ async function renderResults() {
   setButtonBusy(els.nextQuestion, true, "...");
 
   const evaluated = [];
-  for (const question of state.questions) {
-    const saved = state.answers.get(question.id);
-    if (saved?.feedback) {
-      evaluated.push(saved.feedback);
-      continue;
-    }
+  try {
+    const pending = state.questions.map(async (question) => {
+      const saved = state.answers.get(question.id);
+      if (saved?.feedback) return saved.feedback;
+      if (!saved?.answer?.trim()) return null;
 
-    const result = await postJson("/api/interview/feedback", {
-      question,
-      answer: saved?.answer ?? "",
-      speechStats: saved?.speechStats ?? getSpeechStatsSnapshot(),
-      visualStats: getVisualStatsSnapshot(),
+      const result = await LLMFeedbackModule.evaluateAnswer(
+        question,
+        saved.answer,
+        saved.speechStats ?? getSpeechStatsSnapshot(),
+        getVisualStatsSnapshot(),
+      );
+      state.answers.set(question.id, { ...saved, feedback: result.feedback });
+      return result.feedback;
     });
-    state.answers.set(question.id, {
-      answer: saved?.answer ?? "",
-      speechStats: saved?.speechStats ?? getSpeechStatsSnapshot(),
-      feedback: result.feedback,
+    const results = await Promise.allSettled(pending);
+    results.forEach((result) => {
+      if (result.status === "fulfilled" && result.value) evaluated.push(result.value);
+      if (result.status === "rejected") console.error("No se pudo evaluar una respuesta:", result.reason);
     });
-    evaluated.push(result.feedback);
+  } finally {
+    setButtonBusy(els.nextQuestion, false, ">");
   }
 
-  setButtonBusy(els.nextQuestion, false, ">");
-
-  const average = Math.round(evaluated.reduce((sum, item) => sum + item.score, 0) / evaluated.length);
+  const average = averageFeedbackScore(evaluated);
   const visual = getVisualStatsSnapshot();
   els.finalScore.textContent = `${average}`;
   els.finalSummary.textContent =
@@ -1178,20 +1222,6 @@ function renderTimer() {
   const minutes = String(Math.floor(state.secondsLeft / 60)).padStart(2, "0");
   const seconds = String(state.secondsLeft % 60).padStart(2, "0");
   els.timer.textContent = `${minutes}:${seconds}`;
-}
-
-async function postJson(url, payload) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message ?? data.error ?? "request_failed");
-  }
-  return data;
 }
 
 function setButtonBusy(button, isBusy, text) {

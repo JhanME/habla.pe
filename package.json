@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs src 5173",
-    "dev": "node server.mjs src 5173"
+    "dev": "node server.mjs src 5173",
+    "test": "node --test"
   }
 }
