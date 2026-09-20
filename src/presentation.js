@@ -2,7 +2,7 @@ import { calculateSpeechMetrics } from "./modules/SpeechMetrics.js";
 
 const $ = (selector) => document.querySelector(selector);
 const state = { pdf: null, slideTexts: [], current: 0, transcripts: [], recognition: null, recording: false, startedAt: null, timerId: null, secondsLeft: null, stream: null, pose: null, poseLoop: null, poseSamples: 0, visibleBodySamples: 0 };
-const els = { setup: $("#presentationSetup"), form: $("#presentationForm"), file: $("#presentationFile"), fileName: $("#fileName"), rubric: $("#rubric"), juryRole: $("#juryRole"), useTimer: $("#useTimer"), minutesField: $("#minutesField"), minutes: $("#timerMinutes"), stage: $("#stageView"), jury: $("#juryView"), slideCanvas: $("#slideCanvas"), counter: $("#slideCounter"), timer: $("#stageTimer"), status: $("#stageStatus"), toggle: $("#togglePractice"), prev: $("#prevSlide"), next: $("#nextSlide"), finish: $("#finishPresentation"), exit: $("#exitStage"), video: $("#poseVideo"), poseCanvas: $("#poseCanvas"), cameraMessage: $("#cameraMessage"), posture: $("#postureMetric"), speech: $("#speechMetric"), transcript: $("#liveTranscript"), juryQuestions: $("#juryQuestions"), score: $("#presentationScore"), summary: $("#presentationSummary"), tips: $("#presentationTips") };
+const els = { setup: $("#presentationSetup"), form: $("#presentationForm"), file: $("#presentationFile"), fileName: $("#fileName"), rubric: $("#rubric"), juryRole: $("#juryRole"), useTimer: $("#useTimer"), minutesField: $("#minutesField"), minutes: $("#timerMinutes"), stage: $("#stageView"), jury: $("#juryView"), slideCanvas: $("#slideCanvas"), counter: $("#slideCounter"), bottomCounter: $("#bottomSlideCounter"), slideNumber: $("#slideNumber"), slideTotal: $("#slideTotal"), timer: $("#stageTimer"), status: $("#stageStatus"), toggle: $("#togglePractice"), prev: $("#prevSlide"), next: $("#nextSlide"), finish: $("#finishPresentation"), exit: $("#exitStage"), video: $("#poseVideo"), poseCanvas: $("#poseCanvas"), cameraMessage: $("#cameraMessage"), posture: $("#postureMetric"), speech: $("#speechMetric"), transcript: $("#liveTranscript"), juryQuestions: $("#juryQuestions"), score: $("#presentationScore"), summary: $("#presentationSummary"), tips: $("#presentationTips") };
 
 els.useTimer.addEventListener("change", () => els.minutesField.classList.toggle("hidden", !els.useTimer.checked));
 els.file.addEventListener("change", () => { els.fileName.textContent = els.file.files?.[0]?.name ?? "Selecciona un archivo"; });
@@ -10,6 +10,12 @@ els.form.addEventListener("submit", preparePresentation);
 els.toggle.addEventListener("click", () => state.recording ? stopPractice() : startPractice());
 els.prev.addEventListener("click", () => changeSlide(-1));
 els.next.addEventListener("click", () => changeSlide(1));
+els.slideNumber.addEventListener("change", () => goToSlide(Number(els.slideNumber.value) - 1));
+document.addEventListener("keydown", (event) => {
+  if (els.stage.classList.contains("hidden") || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
+  if (event.key === "ArrowLeft" || event.key === "PageUp") changeSlide(-1);
+  if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") { event.preventDefault(); changeSlide(1); }
+});
 els.finish.addEventListener("click", finishPresentation);
 els.exit.addEventListener("click", () => { stopPractice(); stopCamera(); location.href = "./"; });
 
@@ -43,13 +49,23 @@ async function renderSlide() {
   canvas.width = viewport.width; canvas.height = viewport.height;
   await page.render({ canvasContext: context, viewport }).promise;
   els.counter.textContent = `Diapositiva ${state.current + 1} / ${state.pdf.numPages}`;
+  els.bottomCounter.textContent = `${state.current + 1} / ${state.pdf.numPages}`;
+  els.slideNumber.value = String(state.current + 1);
+  els.slideNumber.max = String(state.pdf.numPages);
+  els.slideTotal.textContent = `/ ${state.pdf.numPages}`;
   els.prev.disabled = state.current === 0; els.next.disabled = state.current === state.pdf.numPages - 1;
   renderTranscript();
 }
 
 async function changeSlide(delta) {
-  const next = Math.max(0, Math.min(state.pdf.numPages - 1, state.current + delta));
-  if (next === state.current) return; state.current = next; await renderSlide();
+  await goToSlide(state.current + delta);
+}
+
+async function goToSlide(index) {
+  const next = Math.max(0, Math.min(state.pdf.numPages - 1, Number(index) || 0));
+  if (next === state.current) { els.slideNumber.value = String(state.current + 1); return; }
+  state.current = next;
+  await renderSlide();
 }
 
 function setupRecognition() {
@@ -86,7 +102,7 @@ async function startCamera() {
   } catch (error) { console.error(error); els.cameraMessage.textContent = "Cámara o análisis corporal no disponible"; }
 }
 function poseLoop() { const run = () => { if (!state.stream) return; if (els.video.readyState >= 2 && state.pose) { const result = state.pose.detectForVideo(els.video, performance.now()); drawPose(result.landmarks?.[0]); } state.poseLoop = requestAnimationFrame(run); }; run(); }
-function drawPose(points) { const canvas = els.poseCanvas; canvas.width = els.video.videoWidth || 720; canvas.height = els.video.videoHeight || 960; const ctx = canvas.getContext("2d"); ctx.clearRect(0,0,canvas.width,canvas.height); state.poseSamples += 1; if (!points?.length) { els.posture.textContent = "Postura: fuera de encuadre"; return; } const key = [11,12,13,14,15,16,23,24,25,26,27,28]; const visible = key.filter((i) => (points[i]?.visibility ?? 1) > .55); if (visible.length >= 10) state.visibleBodySamples += 1; els.posture.textContent = visible.length >= 10 ? "Postura: cuerpo visible" : "Postura: ajusta el encuadre"; ctx.fillStyle="#8b7cff"; key.forEach((i) => { const p=points[i]; if(!p)return;ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,5,0,Math.PI*2);ctx.fill(); }); const links=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];ctx.strokeStyle="#d7d1ff";ctx.lineWidth=3;links.forEach(([a,b])=>{ctx.beginPath();ctx.moveTo(points[a].x*canvas.width,points[a].y*canvas.height);ctx.lineTo(points[b].x*canvas.width,points[b].y*canvas.height);ctx.stroke();}); }
+function drawPose(points) { const canvas = els.poseCanvas; canvas.width = els.video.videoWidth || 720; canvas.height = els.video.videoHeight || 960; const ctx = canvas.getContext("2d"); ctx.clearRect(0,0,canvas.width,canvas.height); state.poseSamples += 1; if (!points?.length) { els.posture.textContent = "Postura: fuera de encuadre"; return; } const key = [11,12,13,14,15,16,23,24,25,26,27,28]; const visible = key.filter((i) => (points[i]?.visibility ?? 1) > .55); if (visible.length >= 10) state.visibleBodySamples += 1; els.posture.textContent = visible.length >= 10 ? "Postura: cuerpo visible" : "Postura: ajusta el encuadre"; ctx.fillStyle="#f59e0b"; key.forEach((i) => { const p=points[i]; if(!p)return;ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,5,0,Math.PI*2);ctx.fill(); }); const links=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];ctx.strokeStyle="#ffffff";ctx.lineWidth=3;links.forEach(([a,b])=>{ctx.beginPath();ctx.moveTo(points[a].x*canvas.width,points[a].y*canvas.height);ctx.lineTo(points[b].x*canvas.width,points[b].y*canvas.height);ctx.stroke();}); }
 function stopCamera() { if (state.poseLoop) cancelAnimationFrame(state.poseLoop); state.stream?.getTracks().forEach((track)=>track.stop()); state.pose?.close?.(); state.stream=null; }
 
 async function finishPresentation() {

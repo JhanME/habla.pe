@@ -26,7 +26,15 @@
   <section id="stageView" class="stage-view hidden">
     <header class="stage-header"><button id="exitStage" class="ghost-button">← Salir</button><div><strong id="slideCounter">Diapositiva 1 / 1</strong><span id="stageStatus">Listo para presentar</span></div><time id="stageTimer">Sin límite</time></header>
     <div class="stage-grid">
-      <article class="slide-stage"><canvas id="slideCanvas"></canvas><div class="slide-controls"><button id="prevSlide" class="ghost-button">← Anterior</button><button id="togglePractice" class="primary-button">Iniciar exposición</button><button id="nextSlide" class="ghost-button">Siguiente →</button></div></article>
+      <article class="slide-stage">
+        <div class="slide-frame"><canvas id="slideCanvas"></canvas><span id="bottomSlideCounter" class="bottom-slide-counter">1 / 1</span></div>
+        <div class="slide-controls">
+          <button id="prevSlide" class="slide-nav-button" type="button" aria-label="Diapositiva anterior">← <span>Anterior</span></button>
+          <label class="slide-jump"><span>Diapositiva</span><input id="slideNumber" type="number" min="1" value="1" /><b id="slideTotal">/ 1</b></label>
+          <button id="togglePractice" class="primary-button" type="button">Iniciar exposición</button>
+          <button id="nextSlide" class="slide-nav-button" type="button" aria-label="Siguiente diapositiva"><span>Siguiente</span> →</button>
+        </div>
+      </article>
       <aside class="presenter-stage"><div class="camera-wrap"><video id="poseVideo" playsinline muted></video><canvas id="poseCanvas"></canvas><div id="cameraMessage">Cámara de cuerpo completo</div></div><div class="live-metrics"><span id="postureMetric">Postura: --</span><span id="speechMetric">Muletillas: 0 · Ritmo: 0 ppm</span></div><p id="liveTranscript">Tu transcripción aparecerá aquí.</p></aside>
     </div>
     <button id="finishPresentation" class="finish-button">Finalizar y pasar al jurado</button>
